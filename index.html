@@ -131,70 +131,96 @@
             100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
         }
 
-        /* === НАЗОЙЛИВАЯ РЕКЛАМА === */
+        /* === НАЗОЙЛИВАЯ РЕКЛАМА (СТИЛЬ NATIVE ADS) === */
         .spam-ad {
             position: fixed;
             z-index: 9999;
-            background: #fff;
-            border: 3px solid #ff0000;
-            border-radius: 8px;
-            padding: 12px;
-            width: 280px;
-            box-shadow: 0 0 30px rgba(255,0,0,0.5), inset 0 0 20px rgba(255,255,0,0.2);
-            font-family: 'Arial', sans-serif;
+            background: #ffffff;
             color: #000;
-            animation: adShake 0.15s linear infinite, adPopIn 0.3s ease-out;
-            cursor: default;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            width: 320px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: row;
+            animation: adShake 0.2s linear infinite, adPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             user-select: none;
         }
-        .spam-ad.ad-exit { animation: adPopOut 0.3s ease-in forwards; }
+        
+        .spam-ad.ad-exit { animation: adPopOut 0.3s ease-in forwards; pointer-events: none; }
 
         @keyframes adShake {
             0% { transform: translate(0,0) rotate(0deg); }
-            25% { transform: translate(-2px,1px) rotate(-1deg); }
-            50% { transform: translate(1px,-2px) rotate(1deg); }
-            75% { transform: translate(-1px,2px) rotate(-0.5deg); }
-            100% { transform: translate(2px,-1px) rotate(0.5deg); }
+            25% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+            50% { transform: translate(1px, -1px) rotate(0.5deg); }
+            75% { transform: translate(-1px, -1px) rotate(-0.2deg); }
+            100% { transform: translate(1px, 1px) rotate(0.2deg); }
         }
-        @keyframes adPopIn { from { opacity:0; transform:scale(0.3); } to { opacity:1; transform:scale(1); } }
-        @keyframes adPopOut { from { opacity:1; transform:scale(1); } to { opacity:0; transform:scale(0.3); } }
+        @keyframes adPopIn { from { opacity:0; transform:scale(0.5); } to { opacity:1; transform:scale(1); } }
+        @keyframes adPopOut { from { opacity:1; transform:scale(1); } to { opacity:0; transform:scale(0.5); } }
+
+        .ad-image-col {
+            width: 110px;
+            flex-shrink: 0;
+            position: relative;
+            background: #eee;
+        }
+        .ad-img {
+            width: 100%; height: 100%; object-fit: cover;
+            display: block;
+        }
+        .ad-source-badge {
+            position: absolute; top: 6px; left: 6px;
+            background: rgba(0,0,0,0.6); color: #fff;
+            font-size: 9px; padding: 2px 5px; border-radius: 4px;
+            display: flex; align-items: center; gap: 3px;
+        }
+        .ad-source-badge svg { width: 10px; height: 10px; fill: #fff; }
+
+        .ad-content-col {
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-grow: 1;
+            position: relative;
+        }
 
         .ad-close {
-            position: absolute; top: 4px; right: 6px;
-            background: #ff0000; color: #fff; border: none;
-            width: 24px; height: 24px; border-radius: 50%;
-            font-size: 14px; font-weight: bold; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            line-height: 1;
+            position: absolute; top: 8px; right: 8px;
+            background: none; border: none;
+            color: #999; font-size: 16px; cursor: pointer;
+            padding: 4px; line-height: 1;
         }
-        .ad-close:hover { background: #cc0000; }
+        .ad-close:hover { color: #333; }
 
-        .ad-img {
-            width: 100%; height: 140px; object-fit: cover;
-            border-radius: 4px; margin-bottom: 8px;
-            border: 1px solid #ddd;
-        }
-        .ad-title {
-            font-size: 14px; font-weight: bold; color: #cc0000;
-            margin-bottom: 4px; line-height: 1.3;
-            text-transform: uppercase;
+        .ad-headline {
+            font-size: 14px; font-weight: 600; line-height: 1.3;
+            margin-bottom: 4px; color: #1a1a1a;
+            padding-right: 15px;
         }
         .ad-price {
-            font-size: 18px; font-weight: bold; color: #006600;
-            margin-bottom: 6px;
+            font-size: 15px; font-weight: 700; color: #333;
+            margin-bottom: 12px;
         }
         .ad-desc {
-            font-size: 11px; color: #333; line-height: 1.4;
+            font-size: 11px; color: #666; line-height: 1.3;
+            margin-bottom: 10px;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .ad-badge {
+
+        .ad-btn {
             display: inline-block;
-            background: #ffff00; color: #000;
-            font-size: 9px; font-weight: bold;
-            padding: 2px 6px; border-radius: 3px;
-            margin-top: 6px;
-            animation: badgeBlink 0.5s ease-in-out infinite alternate;
+            background: #007bff; color: #fff;
+            text-decoration: none; font-size: 13px; font-weight: 500;
+            padding: 8px 16px; border-radius: 6px;
+            text-align: center;
+            transition: background 0.2s;
+            border: none; cursor: pointer;
+            width: fit-content;
         }
-        @keyframes badgeBlink { from{opacity:1} to{opacity:0.5} }
+        .ad-btn:hover { background: #0056b3; }
 
         @media (max-width: 600px) {
             .memorial { padding: 50px 18px 50px; }
@@ -204,8 +230,8 @@
             .card { padding: 24px 20px; font-size: 1rem; }
             .btn-wrap { flex-direction: column; gap: 16px; }
             .nav-btn, .rainbow-btn { padding: 16px 36px; font-size: 0.95rem; width: 100%; justify-content: center; }
-            .spam-ad { width: 220px; padding: 10px; }
-            .ad-img { height: 100px; }
+            .spam-ad { width: 280px; }
+            .ad-image-col { width: 90px; }
         }
     </style>
 </head>
@@ -310,107 +336,128 @@
         rb.addEventListener('mouseenter', () => { pInt = setInterval(spawnParticle, 50); });
         rb.addEventListener('mouseleave', () => { clearInterval(pInt); });
 
-        // === СИСТЕМА НАЗОЙЛИВОЙ РЕКЛАМЫ ===
-        const adTemplates = [
-            { q: 'списание курсовая', title: 'КУРСОВАЯ ЗА 2 ЧАСА!!!', desc: 'Любая сложность! Антиплагиат 90%+ Гарантия!' },
-            { q: 'прокачка аккаунта genshin', title: 'ПРОКАЧКА GENSHIN IMPACT', desc: 'Ранг 55+ за 3 дня! Все квесты! Дёшево!' },
-            { q: 'дипломная работа купить', title: 'ДИПЛОМ ОТ 5000₽', desc: 'Пишут кандидаты наук! Уникальность 85%!' },
-            { q: 'буст ранга valorant', title: 'БУСТ VALORANT IMMORTAL', desc: 'Быстро! Анонимно! Скидка 30% сегодня!' },
-            { q: 'реферат срочно', title: 'РЕФЕРАТ ЗА 30 МИНУТ', desc: 'Любая тема! Оформление ГОСТ! Скидки!' },
-            { q: 'аккаунт steam купить', title: 'STEAM АККАУНТЫ С ИГРАМИ', desc: '100+ игр! Полный доступ! Моментальная выдача!' },
-            { q: 'эссе на заказ', title: 'ЭССЕ / СТАТЬЯ / ДОКЛАД', desc: 'От 200₽! Срок от 1 часа! Оригинально!' },
-            { q: 'прокачка world of tanks', title: 'WOT ПРОКАЧКА X УРОВЕНЬ', desc: 'Статистика 60%+! WN8 3000+! Быстро!' },
-            { q: 'контрольная работа математика', title: 'МАТЕМАТИКА ЛЮБОЙ УРОВЕНЬ', desc: 'Решение за ночь! Пошаговое оформление!' },
-            { q: 'minecraft сервер настроить', title: 'MINECRAFT СЕРВЕР ПОД КЛЮЧ', desc: 'Плагины! Защита! Донат! Запуск за день!' },
-            { q: 'взлом страницы вк', title: 'ВОССТАНОВЛЕНИЕ СТРАНИЦ', desc: 'Любой соцсети! 100% результат! Анонимно!' },
-            { q: 'подписчики телеграм накрутка', title: 'ПОДПИСЧИКИ TELEGRAM', desc: 'Живые! От 1₽/шт! Мгновенный старт!' },
-            { q: 'дизертация заказать', title: 'ДИССЕРТАЦИЯ КАНДИДАТСКАЯ', desc: 'Под ключ! Публикации ВАК! Рассрочка!' },
-            { q: 'чит для cs2 купить', title: 'CS2 PRIVATE CHEAT', desc: 'Undetected! Wallhack+AIM! Подписка от 300₽!' },
-            { q: 'лабораторная работа физика', title: 'ЛАБЫ ФИЗИКА / ХИМИЯ', desc: 'Оформление + защита! Решаем пачками!' }
+        // === СИСТЕМА НАЗОЙЛИВОЙ РЕКЛАМЫ (NATIVE STYLE) ===
+        
+        // База данных объявлений с ключевыми словами для поиска картинок
+        const adDatabase = [
+            { title: "Сафарова Вера", price: "2 150 000 ₽", desc: "Срочный сбор на лечение. Помогите ребенку!", kw: "sad child glasses", btn: "Узнать больше" },
+            { title: "Списание кредитов", price: "от 15 000 ₽", desc: "Законное списание долгов через банкротство. Бесплатная консультация.", kw: "money debt", btn: "Списать долг" },
+            { title: "Прокачка Genshin Impact", price: "3 500 ₽", desc: "Ранг 55 за 2 дня. Все архонты. Гарантия безопасности аккаунта.", kw: "anime girl gaming", btn: "Заказать буст" },
+            { title: "Курсовая под ключ", price: "2 990 ₽", desc: "Любая сложность. Антиплагиат 90%. Срок от 24 часов.", kw: "student studying library", btn: "Купить работу" },
+            { title: "Накрутка подписчиков", price: "100 шт за 50 ₽", desc: "Живые люди, не боты. Мгновенный старт. VK, TG, Insta.", kw: "social media smartphone", btn: "Накрутить" },
+            { title: "Взлом бывшего", price: "5 000 ₽", desc: "Вернем любовь или вернем деньги. Привороты, снятие венца безбрачия.", kw: "mystic candles magic", btn: "Написать магу" },
+            { title: "Аккаунт Steam (100+ игр)", price: "800 ₽", desc: "Полный доступ, смена почты. GTA V, CS2, Dota 2 в комплекте.", kw: "gaming setup pc", btn: "Купить аккаунт" },
+            { title: "Реферат за 30 минут", price: "450 ₽", desc: "Успей сдать до пары! Любая тема. Оформление по ГОСТу.", kw: "books stack education", btn: "Заказать срочно" },
+            { title: "Буст ранга Valorant", price: "1 200 ₽/ранг", desc: "Играют глобалисты. Без читов. Статистика не упадет.", kw: "esports gamer headset", btn: "Поднять ранг" },
+            { title: "Дипломная работа", price: "12 000 ₽", desc: "Пишем сами, без посредников. Допуск к защите гарантируем.", kw: "graduation cap university", btn: "Рассчитать стоимость" },
+            { title: "Читы для CS2", price: "300 ₽/мес", desc: "WH, AIM, SKINCHANGER. Undetected статус. Техподдержка 24/7.", kw: "computer code matrix", btn: "Скачать софт" },
+            { title: "Лабораторные работы", price: "200 ₽/шт", desc: "Физика, химия, информатика. Решение + отчет + защита.", kw: "science laboratory microscope", btn: "Сдать лабы" },
+            { title: "Массаж всего тела", price: "1 500 ₽", desc: "Релакс, спортивный, антицеллюлитный. Выезд на дом.", kw: "spa massage oil", btn: "Записаться" },
+            { title: "Грузоперевозки Газель", price: "от 800 ₽/час", desc: "Квартирные переезды, вывоз мусора. Трезвые грузчики.", kw: "moving truck boxes", btn: "Вызвать газель" },
+            { title: "Ремонт iPhone", price: "от 990 ₽", desc: "Замена экрана, батареи, разъема. Оригинальные запчасти.", kw: "broken phone repair", btn: "Починить телефон" },
+            { title: "Корм для котов Premium", price: "Скидка 40%", desc: "Whiskas, Kitekat оптом. Доставка до двери. Успей купить!", kw: "cute cat eating", btn: "В корзину" },
+            { title: "Курсы Python с нуля", price: "Бесплатно (вебинар)", desc: "Стань программистом за 3 месяца. Трудоустройство.", kw: "coding laptop screen", btn: "Регистрация" },
+            { title: "Пластиковые окна", price: "от 5 000 ₽", desc: "Немецкое качество. Монтаж за 1 день. Зимняя скидка.", kw: "window house sunny", btn: "Вызвать замерщика" },
+            { title: "Маникюр + Гель-лак", price: "990 ₽", desc: "Стерильный инструмент. Огромная палитра. Чай/кофе бесплатно.", kw: "nails polish beauty", btn: "Записаться" },
+            { title: "Автовыкуп дорого", price: "Деньги сразу", desc: "Выкупим авто в любом состоянии. Кредитные, битые, не на ходу.", kw: "car keys luxury", btn: "Оценить авто" },
+            { title: "Дилдо резиновый", price: "1488", desc: "от 10 до 50 см.", kw: "big black penis", btn: "Купить" }
         ];
 
-        const badges = ['🔥 ГОРЯЧЕЕ', '⚡ СРОЧНО', '💰 СКИДКА', '✅ ГАРАНТИЯ', '🎁 БОНУС', '❗ ТОП ПРЕДЛОЖЕНИЕ'];
-
-        function getRandomAd() {
-            const t = adTemplates[Math.floor(Math.random() * adTemplates.length)];
-            const price = Math.floor(Math.random() * 9500 + 500);
-            const badge = badges[Math.floor(Math.random() * badges.length)];
-            const imgUrl = `https://loremflickr.com/280/140/${encodeURIComponent(t.q)}?random=${Math.floor(Math.random()*9999)}`;
-            return { ...t, price, badge, imgUrl };
+        function getRandomAdData() {
+            const item = adDatabase[Math.floor(Math.random() * adDatabase.length)];
+            // Добавляем случайное число к запросу картинки, чтобы они были разными
+            const randomSeed = Math.floor(Math.random() * 10000);
+            return {
+                ...item,
+                imgUrl: `https://source.unsplash.com/random/200x200/?${encodeURIComponent(item.kw)}&sig=${randomSeed}`
+            };
         }
 
         function createSpamAd() {
-            const data = getRandomAd();
+            const data = getRandomAdData();
             const ad = document.createElement('div');
             ad.className = 'spam-ad';
 
-            // Рандомная позиция (не полностью за экраном)
-            const maxX = window.innerWidth - 300;
-            const maxY = window.innerHeight - 350;
+            // Рандомная позиция
+            const maxX = window.innerWidth - 340;
+            const maxY = window.innerHeight - 200;
             ad.style.left = Math.max(10, Math.random() * maxX) + 'px';
             ad.style.top = Math.max(10, Math.random() * maxY) + 'px';
-
-            // Рандомный угол наклона для дополнительного хаоса
-            const tilt = (Math.random() - 0.5) * 10;
+            
+            // Случайный поворот для хаоса
+            const tilt = (Math.random() - 0.5) * 6; 
             ad.style.transform = `rotate(${tilt}deg)`;
 
             ad.innerHTML = `
-                <button class="ad-close" onclick="this.parentElement.classList.add('ad-exit');setTimeout(()=>this.parentElement.remove(),300)">✕</button>
-                <img class="ad-img" src="${data.imgUrl}" alt="ad" onerror="this.src='https://placehold.co/280x140/cc0000/ffffff?text=РЕКЛАМА'">
-                <div class="ad-title">${data.title}</div>
-                <div class="ad-price">ВСЕГО ${data.price.toLocaleString('ru-RU')}₽</div>
-                <div class="ad-desc">${data.desc}</div>
-                <div class="ad-badge">${data.badge}</div>
+                <div class="ad-image-col">
+                    <img class="ad-img" src="${data.imgUrl}" alt="ad image" loading="lazy">
+                    <div class="ad-source-badge">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        РЕКЛАМА
+                    </div>
+                </div>
+                <div class="ad-content-col">
+                    <button class="ad-close" onclick="this.closest('.spam-ad').classList.add('ad-exit');setTimeout(()=>this.closest('.spam-ad').remove(),300)">✕</button>
+                    <div>
+                        <div class="ad-headline">${data.title}</div>
+                        <div class="ad-price">${data.price}</div>
+                        <div class="ad-desc">${data.desc}</div>
+                    </div>
+                    <button class="ad-btn">${data.btn}</button>
+                </div>
             `;
 
-            // Перетаскивание (чтобы ещё больше мешала)
+            // Логика перетаскивания (чтобы бесило еще больше)
             let isDragging = false, startX, startY, origLeft, origTop;
             ad.addEventListener('mousedown', e => {
-                if (e.target.classList.contains('ad-close')) return;
+                if (e.target.classList.contains('ad-close') || e.target.classList.contains('ad-btn')) return;
                 isDragging = true;
                 startX = e.clientX; startY = e.clientY;
                 origLeft = parseInt(ad.style.left); origTop = parseInt(ad.style.top);
                 ad.style.zIndex = 10000;
+                ad.style.animation = 'none'; // Остановить тряску при перетаскивании
             });
             document.addEventListener('mousemove', e => {
                 if (!isDragging) return;
                 ad.style.left = (origLeft + e.clientX - startX) + 'px';
                 ad.style.top = (origTop + e.clientY - startY) + 'px';
             });
-            document.addEventListener('mouseup', () => { isDragging = false; });
+            document.addEventListener('mouseup', () => { 
+                if(isDragging) {
+                    isDragging = false; 
+                    ad.style.animation = 'adShake 0.2s linear infinite'; // Вернуть тряску
+                }
+            });
 
             document.body.appendChild(ad);
 
-            // Автоудаление через 8-15 секунд если не закрыли
+            // Автоудаление через 10-20 секунд
             setTimeout(() => {
                 if (ad.parentNode) {
                     ad.classList.add('ad-exit');
                     setTimeout(() => ad.remove(), 300);
                 }
-            }, Math.random() * 7000 + 8000);
+            }, Math.random() * 10000 + 10000);
         }
 
-        // Спавн рекламы каждые 2-5 секунд
+        // Планировщик появления рекламы
         function scheduleNextAd() {
-            const delay = Math.random() * 3000 + 2000;
+            // Интервал от 1.5 до 4 секунд
+            const delay = Math.random() * 2500 + 1500;
             setTimeout(() => {
                 createSpamAd();
+                // Иногда создаем сразу две
+                if (Math.random() > 0.8) setTimeout(createSpamAd, 500);
                 scheduleNextAd();
             }, delay);
         }
 
-        // Первый показ через 1.5 секунды
+        // Запуск через 1 секунду после загрузки
         setTimeout(() => {
             createSpamAd();
             scheduleNextAd();
-        }, 1500);
+        }, 1000);
 
-        // Иногда спавним по 2 сразу для максимального раздражения
-        setInterval(() => {
-            if (Math.random() > 0.7) {
-                setTimeout(createSpamAd, 300);
-            }
-        }, 6000);
     </script>
 </body>
 </html>
