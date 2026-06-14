@@ -2,355 +2,165 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>АХУЕННЫЙ ПИЗДЕЦ</title>
+    <title>Лабиринт Ужаса</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            min-height: 100vh;
-            background: #0a0a12;
-            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
-            overflow-x: hidden;
-            cursor: none;
-        }
-
-        /* Кастомный SVG курсор */
-        .cursor {
-            position: fixed;
-            width: 40px; height: 40px;
-            pointer-events: none;
-            z-index: 9999;
-            transform: translate(-50%, -50%);
-            transition: transform 0.1s ease;
-            filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
-        }
-        .cursor svg { width: 100%; height: 100%; animation: cursorSpin 3s linear infinite; }
-        @keyframes cursorSpin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-
-        .rainbow-bg {
-            position: fixed; inset: 0; z-index: 0;
-            background: linear-gradient(90deg, #ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff,#ff0088,#ff0000);
-            background-size: 800% 100%;
-            animation: bgFlow 3s linear infinite;
-            opacity: 0.12;
-        }
-        @keyframes bgFlow { 0%{background-position:0% 50%} 100%{background-position:800% 50%} }
-
-        canvas#confetti { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
-
-        /* SVG дождь */
-        .svg-rain { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
-        .rain-item {
-            position: absolute;
-            animation: rainFall linear infinite;
-            opacity: 0.7;
-        }
-        .rain-item svg { width: 100%; height: 100%; }
-        @keyframes rainFall {
-            0% { transform: translateY(-80px) rotate(0deg); opacity: 0; }
-            10% { opacity: 0.7; }
-            90% { opacity: 0.7; }
-            100% { transform: translateY(calc(100vh + 80px)) rotate(720deg); opacity: 0; }
-        }
-
-        /* Мерцающие SVG звёзды */
-        .sparkle-svg {
-            position: fixed; pointer-events: none; z-index: 1;
-            animation: sparkleAnim 1.5s ease-in-out infinite;
-        }
-        @keyframes sparkleAnim { 0%,100%{opacity:0;transform:scale(0)} 50%{opacity:1;transform:scale(1)} }
-
-        .content {
-            position: relative; z-index: 2;
-            max-width: 900px; margin: 0 auto;
-            padding: 60px 20px 100px;
-            text-align: center;
-        }
-
-        h1 {
-            font-size: clamp(2.5rem, 8vw, 5rem);
-            background: linear-gradient(90deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff,#ff0088);
-            background-size: 400% 100%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: rainbowText 1.5s linear infinite, titleBounce 0.8s ease-in-out infinite;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
-            margin-bottom: 10px;
-        }
-        @keyframes rainbowText { 0%{background-position:0% 50%} 100%{background-position:400% 50%} }
-        @keyframes titleBounce { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-15px) rotate(2deg)} }
-
-        .subtitle {
-            font-size: clamp(1.2rem, 4vw, 2rem);
-            color: #fff;
-            animation: subtitleFlash 0.5s ease-in-out infinite alternate;
-            margin-bottom: 50px;
-        }
-        @keyframes subtitleFlash { 0%{opacity:0.7;transform:scale(1)} 100%{opacity:1;transform:scale(1.05)} }
-
-        .cards { display: flex; flex-direction: column; gap: 30px; margin-bottom: 50px; }
-
-        .card {
-            background: rgba(255,255,255,0.08);
-            border: 2px solid;
-            border-radius: 20px;
-            padding: 35px 30px;
-            backdrop-filter: blur(10px);
-            position: relative; overflow: hidden;
-            transition: transform 0.3s ease;
-        }
-        .card:hover { transform: scale(1.03) rotate(1deg); }
-        .card:nth-child(1) { border-color: #ff0088; animation: cw1 2s ease-in-out infinite; }
-        .card:nth-child(2) { border-color: #00ff00; animation: cw2 2.3s ease-in-out infinite; }
-        .card:nth-child(3) { border-color: #0088ff; animation: cw3 1.8s ease-in-out infinite; }
-        .card:nth-child(4) { border-color: #ffff00; animation: cw4 2.5s ease-in-out infinite; }
-        @keyframes cw1 { 0%,100%{transform:rotate(-1deg)} 50%{transform:rotate(1deg)} }
-        @keyframes cw2 { 0%,100%{transform:translateX(-3px)} 50%{transform:translateX(3px)} }
-        @keyframes cw3 { 0%,100%{transform:rotate(1deg) translateY(-2px)} 50%{transform:rotate(-1deg) translateY(2px)} }
-        @keyframes cw4 { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
-
-        .card::before {
-            content: ""; position: absolute; top: -50%; left: -50%;
-            width: 200%; height: 200%;
-            background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.1), transparent 30%);
-            animation: cardShine 3s linear infinite;
-        }
-        @keyframes cardShine { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-
-        .card-icon { width: 50px; height: 50px; margin: 0 auto 15px; position: relative; z-index: 1; }
-        .card-icon svg { width: 100%; height: 100%; }
-        .card:nth-child(1) .card-icon svg { fill: #ff0088; filter: drop-shadow(0 0 8px #ff0088); animation: iconPulse 1s ease-in-out infinite; }
-        .card:nth-child(2) .card-icon svg { fill: #00ff00; filter: drop-shadow(0 0 8px #00ff00); animation: iconPulse 1.2s ease-in-out infinite; }
-        .card:nth-child(3) .card-icon svg { fill: #0088ff; filter: drop-shadow(0 0 8px #0088ff); animation: iconPulse 0.8s ease-in-out infinite; }
-        .card:nth-child(4) .card-icon svg { fill: #ffff00; filter: drop-shadow(0 0 8px #ffff00); animation: iconPulse 1.4s ease-in-out infinite; }
-        @keyframes iconPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
-
-        .card-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 15px; letter-spacing: 2px; position: relative; z-index: 1; }
-        .card:nth-child(1) .card-title { color: #ff0088; }
-        .card:nth-child(2) .card-title { color: #00ff00; }
-        .card:nth-child(3) .card-title { color: #0088ff; }
-        .card:nth-child(4) .card-title { color: #ffff00; }
-
-        .card p { color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 1.1rem; position: relative; z-index: 1; }
-
-        .back-btn {
-            display: inline-flex; align-items: center; gap: 12px;
-            padding: 18px 45px;
-            background: linear-gradient(90deg,#ff0088,#8800ff,#0088ff);
-            background-size: 300% 100%;
-            border: none; border-radius: 50px;
-            color: #fff; font-family: inherit; font-size: 1.1rem;
-            font-weight: bold; letter-spacing: 2px;
-            text-decoration: none; cursor: none;
-            animation: btnRainbow 2s linear infinite, btnPulse 1s ease-in-out infinite;
-            box-shadow: 0 0 20px rgba(255,0,136,0.5), 0 0 40px rgba(136,0,255,0.3);
-            transition: all 0.3s ease;
-            position: relative; overflow: hidden;
-        }
-        .back-btn:hover {
-            transform: scale(1.1) rotate(-2deg);
-            box-shadow: 0 0 40px rgba(255,0,136,0.8), 0 0 80px rgba(136,0,255,0.5);
-        }
-        .back-btn svg { width: 20px; height: 20px; fill: #fff; }
-        @keyframes btnRainbow { 0%{background-position:0% 50%} 100%{background-position:300% 50%} }
-        @keyframes btnPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
-
-        /* Клик-SVG эффекты */
-        .click-svg {
-            position: fixed; pointer-events: none; z-index: 100;
-            animation: clickPop 1s ease-out forwards;
-        }
-        @keyframes clickPop {
-            0% { opacity: 1; transform: translate(-50%,-50%) scale(0.5) rotate(0deg); }
-            100% { opacity: 0; transform: translate(-50%,calc(-50% - 100px)) scale(1.5) rotate(360deg); }
-        }
-
-        .marquee {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: rgba(0,0,0,0.7); padding: 12px 0;
-            overflow: hidden; z-index: 10; border-top: 2px solid #ff0088;
-        }
-        .marquee-content {
-            display: inline-block; white-space: nowrap;
-            animation: marqueeScroll 15s linear infinite;
-            color: #fff; font-size: 1rem; letter-spacing: 3px;
-        }
-        @keyframes marqueeScroll { 0%{transform:translateX(100vw)} 100%{transform:translateX(-100%)} }
-
-        @media (max-width: 600px) {
-            .content { padding: 40px 15px 100px; }
-            .card { padding: 25px 20px; }
-            .back-btn { padding: 15px 35px; font-size: 1rem; }
-        }
+        body { margin: 0; overflow: hidden; background: #000; font-family: monospace; color: #fff; }
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; z-index: 10; }
+        #stamina-bar { width: 200px; height: 10px; background: #333; border: 1px solid #555; margin-top: 5px; }
+        #stamina-fill { width: 100%; height: 100%; background: #f00; transition: width 0.1s; }
+        #message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2em; display: none; text-align: center; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
-    <!-- SVG Курсор -->
-    <div class="cursor" id="cursor">
-        <svg viewBox="0 0 100 100"><polygon points="50,5 61,35 95,35 68,57 79,90 50,70 21,90 32,57 5,35 39,35" fill="#fff"/></svg>
+    <div id="ui">
+        <div>СТАМИНА</div>
+        <div id="stamina-bar"><div id="stamina-fill"></div></div>
+        <div style="margin-top: 10px;">[WASD] Ходьба | [SHIFT] Спринт | [F] Фонарик</div>
     </div>
+    <div id="message"></div>
 
-    <div class="rainbow-bg"></div>
-    <canvas id="confetti"></canvas>
-    <div class="svg-rain" id="svgRain"></div>
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
-    <div class="content">
-        <h1>АХУЕННЫЙ ПИЗДЕЦ</h1>
-        <div class="subtitle">Добро пожаловать в радужное безумие</div>
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.15);
 
-        <div class="cards">
-            <div class="card">
-                <div class="card-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
-                <div class="card-title">ТУТ ВСЁ ШИКАРНО</div>
-                <p>Эта страница создана для тех, кто устал от серости и хочет увидеть настоящий праздник красок! Здесь всё мерцает, прыгает и танцует!</p>
-            </div>
-            <div class="card">
-                <div class="card-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
-                <div class="card-title">РАДУЖНАЯ МАГИЯ</div>
-                <p>Каждый элемент на этой странице живёт своей жизнью. Карточки виляют, текст переливается всеми цветами радуги, а конфетти падают бесконечно!</p>
-            </div>
-            <div class="card">
-                <div class="card-icon"><svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg></div>
-                <div class="card-title">СДВГ МОД АКТИВИРОВАН</div>
-                <p>Невозможно усидеть на месте! Всё движется, мигает и привлекает внимание. Это самая хаотичная и весёлая страница во всём интернете!</p>
-            </div>
-            <div class="card">
-                <div class="card-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-                <div class="card-title">КЛИКАЙ ВЕЗДЕ</div>
-                <p>Попробуй кликнуть в любом месте экрана — тебя ждёт сюрприз! Каждый клик создаёт взрыв SVG-фигур и радости!</p>
-            </div>
-        </div>
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000);
+        document.body.appendChild(renderer.domElement);
 
-        <a href="index.html" class="back-btn">
-            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            Вернуться к памяти
-        </a>
-    </div>
+        // Освещение
+        const ambientLight = new THREE.AmbientLight(0x111111);
+        scene.add(ambientLight);
 
-    <div class="marquee">
-        <div class="marquee-content">
-            ★ РАДУГА РАДУГА РАДУГА ★ ЕДИНОРОГИ ЛЮБЯТ ТЕБЯ ✦ МЕРЦАНИЕ МЕРЦАНИЕ МЕРЦАНИЕ ★ ВЕСЕЛИСЬ НЕ ГРУСТИ ★ ЖИЗНЬ ПРЕКРАСНА ✦ ТАНЦУЙ КАК НИКТО НЕ ВИДИТ ★
-        </div>
-    </div>
+        const flashlight = new THREE.SpotLight(0xffffff, 2, 40, Math.PI / 6, 0.5, 1);
+        flashlight.position.set(0, 0, 0);
+        camera.add(flashlight);
+        flashlight.target.position.set(0, 0, -1);
+        camera.add(flashlight.target);
+        scene.add(camera);
 
-    <script>
-        // Курсор
-        const cursor = document.getElementById('cursor');
-        document.addEventListener('mousemove', e => {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
-        });
-
-        // Конфетти
-        const canvas = document.getElementById('confetti');
-        const ctx = canvas.getContext('2d');
-        let w, h;
-        const colors = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#8800ff','#ff0088'];
-        const pieces = [];
-
-        function resize() { w = canvas.width = innerWidth; h = canvas.height = innerHeight; }
-        resize(); addEventListener('resize', resize);
-
-        class Piece {
-            constructor() { this.reset(true); }
-            reset(init) {
-                this.x = Math.random() * w;
-                this.y = init ? Math.random() * h : -20;
-                this.w = Math.random() * 10 + 5;
-                this.h = Math.random() * 6 + 3;
-                this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.vy = Math.random() * 3 + 2;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.rot = Math.random() * 360;
-                this.rs = (Math.random() - 0.5) * 10;
-            }
-            update() {
-                this.y += this.vy; this.x += this.vx; this.rot += this.rs;
-                if (this.y > h + 20) this.reset(false);
-            }
-            draw() {
-                ctx.save(); ctx.translate(this.x, this.y);
-                ctx.rotate(this.rot * Math.PI / 180);
-                ctx.fillStyle = this.color;
-                ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h);
-                ctx.restore();
+        // Лабиринт (простая генерация)
+        const mapSize = 20;
+        const walls = [];
+        const geometry = new THREE.BoxGeometry(2, 4, 2);
+        const material = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
+        
+        for (let x = -mapSize; x <= mapSize; x += 2) {
+            for (let z = -mapSize; z <= mapSize; z += 2) {
+                if (Math.random() > 0.7 || x === 0 && z === 0) continue;
+                const wall = new THREE.Mesh(geometry, material);
+                wall.position.set(x, 2, z);
+                scene.add(wall);
+                walls.push(wall);
             }
         }
-        for (let i = 0; i < 200; i++) pieces.push(new Piece());
-        (function anim() { ctx.clearRect(0,0,w,h); pieces.forEach(p=>{p.update();p.draw()}); requestAnimationFrame(anim); })();
 
-        // SVG дождь
-        const rainSVGs = [
-            '<svg viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" fill="currentColor"/></svg>',
-            '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/></svg>',
-            '<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/></svg>',
-            '<svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z" fill="currentColor"/></svg>'
-        ];
-        const rainColors = ['#ff0088','#00ff00','#0088ff','#ffff00','#ff8800','#8800ff'];
-        const rainContainer = document.getElementById('svgRain');
+        // "Страшная ебака"
+        const monsterGeo = new THREE.ConeGeometry(1, 3, 8);
+        const monsterMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const monster = new THREE.Mesh(monsterGeo, monsterMat);
+        monster.position.set(10, 1.5, 10);
+        scene.add(monster);
 
-        function createRain() {
-            const el = document.createElement('div');
-            el.className = 'rain-item';
-            el.innerHTML = rainSVGs[Math.floor(Math.random() * rainSVGs.length)];
-            el.style.left = Math.random() * 100 + '%';
-            el.style.width = (Math.random() * 25 + 15) + 'px';
-            el.style.height = el.style.width;
-            el.style.color = rainColors[Math.floor(Math.random() * rainColors.length)];
-            el.style.animationDuration = (Math.random() * 5 + 4) + 's';
-            el.style.animationDelay = Math.random() * 2 + 's';
-            rainContainer.appendChild(el);
-            setTimeout(() => el.remove(), 12000);
-        }
-        setInterval(createRain, 400);
-        for (let i = 0; i < 15; i++) setTimeout(createRain, i * 200);
+        // Аудио
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.value = 50;
+        gainNode.gain.value = 0.05;
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
 
-        // Мерцающие SVG звёзды
-        function createSparkle() {
-            const el = document.createElement('div');
-            el.className = 'sparkle-svg';
-            el.style.left = Math.random() * 100 + '%';
-            el.style.top = Math.random() * 100 + '%';
-            el.style.width = (Math.random() * 15 + 8) + 'px';
-            el.style.height = el.style.width;
-            el.style.animationDelay = Math.random() * 2 + 's';
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            el.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="12,0 14.5,8.5 23,12 14.5,15.5 12,24 9.5,15.5 1,12 9.5,8.5" fill="${color}"/></svg>`;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 5000);
-        }
-        setInterval(createSparkle, 300);
-        for (let i = 0; i < 30; i++) setTimeout(createSparkle, i * 100);
+        // Управление
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let sprint = false;
+        let stamina = 100;
+        let isFlashlightOn = true;
 
-        // Клик-SVG
-        const clickSVGs = [
-            '<svg viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" fill="currentColor"/></svg>',
-            '<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/></svg>',
-            '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/></svg>'
-        ];
-        document.addEventListener('click', e => {
-            for (let i = 0; i < 5; i++) {
-                const el = document.createElement('div');
-                el.className = 'click-svg';
-                el.innerHTML = clickSVGs[Math.floor(Math.random() * clickSVGs.length)];
-                el.style.width = (Math.random() * 30 + 20) + 'px';
-                el.style.height = el.style.width;
-                el.style.color = colors[Math.floor(Math.random() * colors.length)];
-                el.style.left = (e.clientX + (Math.random()-0.5)*60) + 'px';
-                el.style.top = (e.clientY + (Math.random()-0.5)*60) + 'px';
-                document.body.appendChild(el);
-                setTimeout(() => el.remove(), 1000);
+        document.addEventListener('keydown', (e) => {
+            switch (e.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'ShiftLeft': sprint = true; break;
+                case 'KeyF': 
+                    isFlashlightOn = !isFlashlightOn; 
+                    flashlight.intensity = isFlashlightOn ? 2 : 0; 
+                    break;
             }
         });
 
-        // Случайная смена цвета границ карточек
-        const cards = document.querySelectorAll('.card');
-        setInterval(() => {
-            cards.forEach(card => {
-                if (Math.random() > 0.7) card.style.borderColor = colors[Math.floor(Math.random() * colors.length)];
-            });
-        }, 2000);
+        document.addEventListener('keyup', (e) => {
+            switch (e.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+                case 'ShiftLeft': sprint = false; break;
+            }
+        });
+
+        // Мышь
+        document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
+        document.addEventListener('click', () => document.body.requestPointerLock());
+        
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement === document.body) {
+                camera.rotation.y -= e.movementX * 0.002;
+                camera.rotation.x -= e.movementY * 0.002;
+                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+            }
+        });
+
+        // Логика
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Движение
+            const speed = sprint && stamina > 0 ? 0.15 : 0.08;
+            if (sprint && (moveForward || moveBackward || moveLeft || moveRight)) stamina = Math.max(0, stamina - 1);
+            else stamina = Math.min(100, stamina + 0.5);
+            
+            document.getElementById('stamina-fill').style.width = stamina + '%';
+
+            direction.z = Number(moveForward) - Number(moveBackward);
+            direction.x = Number(moveRight) - Number(moveLeft);
+            direction.normalize();
+
+            if (moveForward || moveBackward) velocity.z -= direction.z * speed;
+            if (moveLeft || moveRight) velocity.x -= direction.x * speed;
+
+            camera.translateX(-velocity.x);
+            camera.translateZ(-velocity.z);
+            velocity.multiplyScalar(0.9);
+
+            // Монстр преследует
+            const dist = camera.position.distanceTo(monster.position);
+            if (dist > 2) {
+                monster.lookAt(camera.position);
+                monster.translateZ(0.04);
+            } else {
+                document.getElementById('message').innerText = "ТЫ ПОГИБ";
+                document.getElementById('message').style.display = 'block';
+            }
+
+            // Звук зависит от расстояния
+            gainNode.gain.value = 0.05 + (20 - Math.min(dist, 20)) * 0.01;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
     </script>
 </body>
 </html>
