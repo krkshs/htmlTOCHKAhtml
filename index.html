@@ -84,7 +84,6 @@
         .epitaph { text-align: center; font-size: clamp(1.2rem, 3vw, 1.5rem); font-style: italic; color: var(--text-muted); margin-bottom: 65px; }
         .epitaph span { color: var(--accent); }
 
-        /* === КНОПКИ === */
         .btn-wrap { display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; }
 
         .nav-btn {
@@ -102,7 +101,6 @@
         .nav-btn:hover svg { transform: translateX(6px); }
         .nav-btn svg { transition: transform 0.3s ease; }
 
-        /* Радужная кнопка */
         .rainbow-btn {
             display: inline-flex; align-items: center; gap: 14px;
             padding: 20px 40px; border: none; border-radius: 50px;
@@ -121,11 +119,9 @@
             animation-duration: 1s, 0.8s;
         }
         .rainbow-btn:active { transform: scale(0.95); }
-
         @keyframes rainbowFlow { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
         @keyframes rainbowBounce { 0%,100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-4px) rotate(-1deg); } 75% { transform: translateY(2px) rotate(1deg); } }
 
-        /* Партиклы радужной кнопки */
         .rainbow-particle {
             position: absolute; border-radius: 50%; pointer-events: none;
             animation: rpFade 0.8s ease-out forwards;
@@ -135,6 +131,71 @@
             100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
         }
 
+        /* === НАЗОЙЛИВАЯ РЕКЛАМА === */
+        .spam-ad {
+            position: fixed;
+            z-index: 9999;
+            background: #fff;
+            border: 3px solid #ff0000;
+            border-radius: 8px;
+            padding: 12px;
+            width: 280px;
+            box-shadow: 0 0 30px rgba(255,0,0,0.5), inset 0 0 20px rgba(255,255,0,0.2);
+            font-family: 'Arial', sans-serif;
+            color: #000;
+            animation: adShake 0.15s linear infinite, adPopIn 0.3s ease-out;
+            cursor: default;
+            user-select: none;
+        }
+        .spam-ad.ad-exit { animation: adPopOut 0.3s ease-in forwards; }
+
+        @keyframes adShake {
+            0% { transform: translate(0,0) rotate(0deg); }
+            25% { transform: translate(-2px,1px) rotate(-1deg); }
+            50% { transform: translate(1px,-2px) rotate(1deg); }
+            75% { transform: translate(-1px,2px) rotate(-0.5deg); }
+            100% { transform: translate(2px,-1px) rotate(0.5deg); }
+        }
+        @keyframes adPopIn { from { opacity:0; transform:scale(0.3); } to { opacity:1; transform:scale(1); } }
+        @keyframes adPopOut { from { opacity:1; transform:scale(1); } to { opacity:0; transform:scale(0.3); } }
+
+        .ad-close {
+            position: absolute; top: 4px; right: 6px;
+            background: #ff0000; color: #fff; border: none;
+            width: 24px; height: 24px; border-radius: 50%;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            line-height: 1;
+        }
+        .ad-close:hover { background: #cc0000; }
+
+        .ad-img {
+            width: 100%; height: 140px; object-fit: cover;
+            border-radius: 4px; margin-bottom: 8px;
+            border: 1px solid #ddd;
+        }
+        .ad-title {
+            font-size: 14px; font-weight: bold; color: #cc0000;
+            margin-bottom: 4px; line-height: 1.3;
+            text-transform: uppercase;
+        }
+        .ad-price {
+            font-size: 18px; font-weight: bold; color: #006600;
+            margin-bottom: 6px;
+        }
+        .ad-desc {
+            font-size: 11px; color: #333; line-height: 1.4;
+        }
+        .ad-badge {
+            display: inline-block;
+            background: #ffff00; color: #000;
+            font-size: 9px; font-weight: bold;
+            padding: 2px 6px; border-radius: 3px;
+            margin-top: 6px;
+            animation: badgeBlink 0.5s ease-in-out infinite alternate;
+        }
+        @keyframes badgeBlink { from{opacity:1} to{opacity:0.5} }
+
         @media (max-width: 600px) {
             .memorial { padding: 50px 18px 50px; }
             .heart-wrap { width: 130px; height: 125px; }
@@ -143,6 +204,8 @@
             .card { padding: 24px 20px; font-size: 1rem; }
             .btn-wrap { flex-direction: column; gap: 16px; }
             .nav-btn, .rainbow-btn { padding: 16px 36px; font-size: 0.95rem; width: 100%; justify-content: center; }
+            .spam-ad { width: 220px; padding: 10px; }
+            .ad-img { height: 100px; }
         }
     </style>
 </head>
@@ -226,30 +289,128 @@
         for (let i = 0; i < 140; i++) pts.push(new P());
         (function loop() { ctx.clearRect(0, 0, w, h); pts.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(loop); })();
 
-        // Радужные партиклы при наведении
+        // Радужные партиклы
         const rb = document.getElementById('rainbowBtn');
-        const colors = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#8800ff','#ff0088'];
+        const rColors = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#8800ff','#ff0088'];
         function spawnParticle() {
             const rect = rb.getBoundingClientRect();
             const el = document.createElement('div');
             el.className = 'rainbow-particle';
             const size = Math.random() * 8 + 4;
-            el.style.width = size + 'px';
-            el.style.height = size + 'px';
-            el.style.background = colors[Math.floor(Math.random() * colors.length)];
+            el.style.width = size + 'px'; el.style.height = size + 'px';
+            el.style.background = rColors[Math.floor(Math.random() * rColors.length)];
             el.style.left = (rect.left + Math.random() * rect.width) + 'px';
             el.style.top = (rect.top + Math.random() * rect.height) + 'px';
-            const tx = (Math.random() - 0.5) * 120;
-            const ty = (Math.random() - 0.5) * 120 - 30;
-            el.style.setProperty('--tx', tx + 'px');
-            el.style.setProperty('--ty', ty + 'px');
+            el.style.setProperty('--tx', (Math.random()-0.5)*120+'px');
+            el.style.setProperty('--ty', ((Math.random()-0.5)*120-30)+'px');
             document.body.appendChild(el);
             el.addEventListener('animationend', () => el.remove());
         }
-        let particleInterval;
-        rb.addEventListener('mouseenter', () => { particleInterval = setInterval(spawnParticle, 50); });
-        rb.addEventListener('mouseleave', () => { clearInterval(particleInterval); });
-        rb.addEventListener('touchstart', () => { for(let i=0;i<15;i++) setTimeout(spawnParticle, i*40); }, {passive:true});
+        let pInt;
+        rb.addEventListener('mouseenter', () => { pInt = setInterval(spawnParticle, 50); });
+        rb.addEventListener('mouseleave', () => { clearInterval(pInt); });
+
+        // === СИСТЕМА НАЗОЙЛИВОЙ РЕКЛАМЫ ===
+        const adTemplates = [
+            { q: 'списание курсовая', title: 'КУРСОВАЯ ЗА 2 ЧАСА!!!', desc: 'Любая сложность! Антиплагиат 90%+ Гарантия!' },
+            { q: 'прокачка аккаунта genshin', title: 'ПРОКАЧКА GENSHIN IMPACT', desc: 'Ранг 55+ за 3 дня! Все квесты! Дёшево!' },
+            { q: 'дипломная работа купить', title: 'ДИПЛОМ ОТ 5000₽', desc: 'Пишут кандидаты наук! Уникальность 85%!' },
+            { q: 'буст ранга valorant', title: 'БУСТ VALORANT IMMORTAL', desc: 'Быстро! Анонимно! Скидка 30% сегодня!' },
+            { q: 'реферат срочно', title: 'РЕФЕРАТ ЗА 30 МИНУТ', desc: 'Любая тема! Оформление ГОСТ! Скидки!' },
+            { q: 'аккаунт steam купить', title: 'STEAM АККАУНТЫ С ИГРАМИ', desc: '100+ игр! Полный доступ! Моментальная выдача!' },
+            { q: 'эссе на заказ', title: 'ЭССЕ / СТАТЬЯ / ДОКЛАД', desc: 'От 200₽! Срок от 1 часа! Оригинально!' },
+            { q: 'прокачка world of tanks', title: 'WOT ПРОКАЧКА X УРОВЕНЬ', desc: 'Статистика 60%+! WN8 3000+! Быстро!' },
+            { q: 'контрольная работа математика', title: 'МАТЕМАТИКА ЛЮБОЙ УРОВЕНЬ', desc: 'Решение за ночь! Пошаговое оформление!' },
+            { q: 'minecraft сервер настроить', title: 'MINECRAFT СЕРВЕР ПОД КЛЮЧ', desc: 'Плагины! Защита! Донат! Запуск за день!' },
+            { q: 'взлом страницы вк', title: 'ВОССТАНОВЛЕНИЕ СТРАНИЦ', desc: 'Любой соцсети! 100% результат! Анонимно!' },
+            { q: 'подписчики телеграм накрутка', title: 'ПОДПИСЧИКИ TELEGRAM', desc: 'Живые! От 1₽/шт! Мгновенный старт!' },
+            { q: 'дизертация заказать', title: 'ДИССЕРТАЦИЯ КАНДИДАТСКАЯ', desc: 'Под ключ! Публикации ВАК! Рассрочка!' },
+            { q: 'чит для cs2 купить', title: 'CS2 PRIVATE CHEAT', desc: 'Undetected! Wallhack+AIM! Подписка от 300₽!' },
+            { q: 'лабораторная работа физика', title: 'ЛАБЫ ФИЗИКА / ХИМИЯ', desc: 'Оформление + защита! Решаем пачками!' }
+        ];
+
+        const badges = ['🔥 ГОРЯЧЕЕ', '⚡ СРОЧНО', '💰 СКИДКА', '✅ ГАРАНТИЯ', '🎁 БОНУС', '❗ ТОП ПРЕДЛОЖЕНИЕ'];
+
+        function getRandomAd() {
+            const t = adTemplates[Math.floor(Math.random() * adTemplates.length)];
+            const price = Math.floor(Math.random() * 9500 + 500);
+            const badge = badges[Math.floor(Math.random() * badges.length)];
+            const imgUrl = `https://loremflickr.com/280/140/${encodeURIComponent(t.q)}?random=${Math.floor(Math.random()*9999)}`;
+            return { ...t, price, badge, imgUrl };
+        }
+
+        function createSpamAd() {
+            const data = getRandomAd();
+            const ad = document.createElement('div');
+            ad.className = 'spam-ad';
+
+            // Рандомная позиция (не полностью за экраном)
+            const maxX = window.innerWidth - 300;
+            const maxY = window.innerHeight - 350;
+            ad.style.left = Math.max(10, Math.random() * maxX) + 'px';
+            ad.style.top = Math.max(10, Math.random() * maxY) + 'px';
+
+            // Рандомный угол наклона для дополнительного хаоса
+            const tilt = (Math.random() - 0.5) * 10;
+            ad.style.transform = `rotate(${tilt}deg)`;
+
+            ad.innerHTML = `
+                <button class="ad-close" onclick="this.parentElement.classList.add('ad-exit');setTimeout(()=>this.parentElement.remove(),300)">✕</button>
+                <img class="ad-img" src="${data.imgUrl}" alt="ad" onerror="this.src='https://placehold.co/280x140/cc0000/ffffff?text=РЕКЛАМА'">
+                <div class="ad-title">${data.title}</div>
+                <div class="ad-price">ВСЕГО ${data.price.toLocaleString('ru-RU')}₽</div>
+                <div class="ad-desc">${data.desc}</div>
+                <div class="ad-badge">${data.badge}</div>
+            `;
+
+            // Перетаскивание (чтобы ещё больше мешала)
+            let isDragging = false, startX, startY, origLeft, origTop;
+            ad.addEventListener('mousedown', e => {
+                if (e.target.classList.contains('ad-close')) return;
+                isDragging = true;
+                startX = e.clientX; startY = e.clientY;
+                origLeft = parseInt(ad.style.left); origTop = parseInt(ad.style.top);
+                ad.style.zIndex = 10000;
+            });
+            document.addEventListener('mousemove', e => {
+                if (!isDragging) return;
+                ad.style.left = (origLeft + e.clientX - startX) + 'px';
+                ad.style.top = (origTop + e.clientY - startY) + 'px';
+            });
+            document.addEventListener('mouseup', () => { isDragging = false; });
+
+            document.body.appendChild(ad);
+
+            // Автоудаление через 8-15 секунд если не закрыли
+            setTimeout(() => {
+                if (ad.parentNode) {
+                    ad.classList.add('ad-exit');
+                    setTimeout(() => ad.remove(), 300);
+                }
+            }, Math.random() * 7000 + 8000);
+        }
+
+        // Спавн рекламы каждые 2-5 секунд
+        function scheduleNextAd() {
+            const delay = Math.random() * 3000 + 2000;
+            setTimeout(() => {
+                createSpamAd();
+                scheduleNextAd();
+            }, delay);
+        }
+
+        // Первый показ через 1.5 секунды
+        setTimeout(() => {
+            createSpamAd();
+            scheduleNextAd();
+        }, 1500);
+
+        // Иногда спавним по 2 сразу для максимального раздражения
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                setTimeout(createSpamAd, 300);
+            }
+        }, 6000);
     </script>
 </body>
 </html>
