@@ -1,1 +1,310 @@
-ВАУ ЭТО ЖЕ ВИЛД
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тёмный Коридор</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        #game {
+            border: 2px solid #333;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        #dialogue {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 20px;
+            border: 2px solid #666;
+            max-width: 600px;
+            display: none;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="instructions">
+        WASD/Стрелки - движение | F - фонарик | E - взаимодействие
+    </div>
+    <svg id="game" width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <pattern id="wallPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                <rect width="20" height="20" fill="#1a1a1a"/>
+                <rect x="0" y="0" width="10" height="10" fill="#222"/>
+                <rect x="10" y="10" width="10" height="10" fill="#222"/>
+            </pattern>
+            
+            <radialGradient id="lightGradient">
+                <stop offset="0%" stop-color="rgba(255, 255, 200, 0.15)"/>
+                <stop offset="50%" stop-color="rgba(255, 255, 200, 0.05)"/>
+                <stop offset="100%" stop-color="rgba(255, 255, 200, 0)"/>
+            </radialGradient>
+        </defs>
+        
+        <rect width="800" height="600" fill="#000"/>
+        
+        <g id="corridor">
+            <rect x="0" y="0" width="300" height="600" fill="url(#wallPattern)"/>
+            <rect x="500" y="0" width="300" height="600" fill="url(#wallPattern)"/>
+            <rect x="300" y="0" width="200" height="600" fill="#1f1f1f"/>
+            <line x1="300" y1="0" x2="300" y2="600" stroke="#2a2a2a" stroke-width="2"/>
+            <line x1="500" y1="0" x2="500" y2="600" stroke="#2a2a2a" stroke-width="2"/>
+            
+            <g id="door">
+                <rect x="380" y="540" width="40" height="60" fill="#3a2515" stroke="#2a1a0f" stroke-width="2"/>
+                <rect x="395" y="565" width="10" height="3" fill="#ffcc00" rx="1"/>
+            </g>
+        </g>
+        
+        <g id="yellowRoom" style="display: none;">
+            <rect width="800" height="600" fill="#b8860b"/>
+            <rect x="30" y="30" width="740" height="540" fill="#d4a017" stroke="#8b6508" stroke-width="3"/>
+            
+            <g id="chair">
+                <rect x="380" y="320" width="40" height="8" fill="#654321"/>
+                <rect x="380" y="328" width="6" height="35" fill="#654321"/>
+                <rect x="414" y="328" width="6" height="35" fill="#654321"/>
+                <rect x="380" y="285" width="40" height="35" fill="#654321"/>
+                <rect x="380" y="360" width="6" height="8" fill="#654321"/>
+                <rect x="414" y="360" width="6" height="8" fill="#654321"/>
+            </g>
+            
+            <g id="vanyak">
+                <rect x="383" y="295" width="34" height="25" fill="#2a2a2a"/>
+                <rect x="388" y="278" width="24" height="22" fill="#a0826d"/>
+                <rect x="386" y="275" width="28" height="8" fill="#1a1a1a"/>
+                <rect x="391" y="288" width="6" height="2" fill="#1a1a1a"/>
+                <rect x="403" y="288" width="6" height="2" fill="#1a1a1a"/>
+                <rect x="383" y="298" width="6" height="18" fill="#2a2a2a"/>
+                <rect x="411" y="298" width="6" height="18" fill="#2a2a2a"/>
+                <rect x="388" y="320" width="9" height="25" fill="#1a1a1a"/>
+                <rect x="403" y="320" width="9" height="25" fill="#1a1a1a"/>
+                <rect x="387" y="345" width="11" height="6" fill="#0f0f0f"/>
+                <rect x="402" y="345" width="11" height="6" fill="#0f0f0f"/>
+            </g>
+        </g>
+        
+        <g id="player">
+            <rect x="395" y="295" width="10" height="10" fill="#4a90e2"/>
+            <rect x="397" y="293" width="6" height="4" fill="#ffdbac"/>
+        </g>
+        
+        <circle id="flashlight" cx="400" cy="300" r="120" fill="url(#lightGradient)" style="display: none;"/>
+        
+        <rect id="darkness" width="800" height="600" fill="rgba(0,0,0,0.8)" style="pointer-events: none;"/>
+    </svg>
+    
+    <div id="dialogue"></div>
+
+    <script>
+        const player = document.getElementById('player');
+        const flashlight = document.getElementById('flashlight');
+        const darkness = document.getElementById('darkness');
+        const door = document.getElementById('door');
+        const dialogue = document.getElementById('dialogue');
+        const corridor = document.getElementById('corridor');
+        const yellowRoom = document.getElementById('yellowRoom');
+        
+        let playerX = 400;
+        let playerY = 300;
+        let flashlightOn = false;
+        let inCorridor = true;
+        let doorOpen = false;
+        let dialogueActive = false;
+        let dialogueStep = 0;
+        let showHint = false;
+        
+        const speed = 3;
+        const keys = {};
+        
+        const dialogues = [
+            "*тишина*",
+            "Ванякек? Ты... ты здесь?",
+            "*лёгкий шёпот из ниоткуда*",
+            "...",
+            "Ты наконец пришёл. Я ждал тебя так долго.",
+            "Помнишь, как мы вместе проходили этот коридор? Я всегда знал, что ты найдёшь меня.",
+            "Но теперь я здесь. В этой жёлтой комнате. Навсегда.",
+            "*его голова медленно поднимается, глаза открываются*",
+            "И ты... ты тоже скоро будешь здесь. Со мной.",
+            "Навсегда.",
+            "*экран начинает мерцать*"
+        ];
+        
+        function movePlayer() {
+            if (dialogueActive) return;
+            
+            let dx = 0, dy = 0;
+            
+            if (keys['w'] || keys['arrowup']) dy = -speed;
+            if (keys['s'] || keys['arrowdown']) dy = speed;
+            if (keys['a'] || keys['arrowleft']) dx = -speed;
+            if (keys['d'] || keys['arrowright']) dx = speed;
+            
+            if (inCorridor) {
+                const newX = playerX + dx;
+                const newY = playerY + dy;
+                
+                if (newX > 310 && newX < 490) playerX = newX;
+                if (newY > 20 && newY < 580) playerY = newY;
+            } else {
+                playerX += dx;
+                playerY += dy;
+                playerX = Math.max(40, Math.min(760, playerX));
+                playerY = Math.max(40, Math.min(560, playerY));
+            }
+            
+            player.setAttribute('transform', `translate(${playerX - 400}, ${playerY - 300})`);
+            
+            if (flashlightOn && inCorridor) {
+                flashlight.setAttribute('cx', playerX);
+                flashlight.setAttribute('cy', playerY);
+                flashlight.style.display = 'block';
+            } else {
+                flashlight.style.display = 'none';
+            }
+            
+            if (inCorridor && playerY > 520 && !doorOpen && !showHint) {
+                showHint = true;
+                dialogue.innerHTML = 'Подойди ближе и нажми E, чтобы открыть дверь';
+                dialogue.style.display = 'block';
+                setTimeout(() => {
+                    dialogue.style.display = 'none';
+                    showHint = false;
+                }, 3000);
+            }
+            
+            if (!inCorridor && Math.abs(playerX - 400) < 60 && Math.abs(playerY - 310) < 60 && !dialogueActive && !showHint) {
+                showHint = true;
+                dialogue.innerHTML = 'Подойди к ванякеку и нажми E';
+                dialogue.style.display = 'block';
+                setTimeout(() => {
+                    dialogue.style.display = 'none';
+                    showHint = false;
+                }, 3000);
+            }
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            keys[key] = true;
+            
+            if (key === 'f' && inCorridor) {
+                flashlightOn = !flashlightOn;
+                if (flashlightOn) {
+                    flashlight.setAttribute('cx', playerX);
+                    flashlight.setAttribute('cy', playerY);
+                }
+            }
+            
+            if (key === 'e') {
+                if (inCorridor && playerY > 520 && !doorOpen) {
+                    doorOpen = true;
+                    door.style.display = 'none';
+                    
+                    dialogue.innerHTML = '*дверь скрипит и открывается*';
+                    dialogue.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        dialogue.style.display = 'none';
+                        corridor.style.display = 'none';
+                        yellowRoom.style.display = 'block';
+                        darkness.style.display = 'none';
+                        inCorridor = false;
+                        playerX = 400;
+                        playerY = 550;
+                        player.setAttribute('transform', `translate(${playerX - 400}, ${playerY - 300})`);
+                        
+                        dialogue.innerHTML = '*ты входишь в жёлтую комнату...*';
+                        dialogue.style.display = 'block';
+                        setTimeout(() => {
+                            dialogue.style.display = 'none';
+                        }, 2000);
+                    }, 1500);
+                }
+                
+                if (!inCorridor && Math.abs(playerX - 400) < 60 && Math.abs(playerY - 310) < 60 && !dialogueActive) {
+                    startDialogue();
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+        
+        function startDialogue() {
+            dialogueActive = true;
+            dialogueStep = 0;
+            showDialogueLine();
+        }
+        
+        function showDialogueLine() {
+            if (dialogueStep < dialogues.length) {
+                dialogue.innerHTML = dialogues[dialogueStep];
+                dialogue.style.display = 'block';
+                dialogueStep++;
+                
+                const delay = dialogueStep < 3 ? 2000 : 3500;
+                setTimeout(() => {
+                    showDialogueLine();
+                }, delay);
+            } else {
+                dialogue.style.display = 'none';
+                dialogueActive = false;
+                
+                setTimeout(() => {
+                    document.body.style.animation = 'flicker 0.15s infinite';
+                    setTimeout(() => {
+                        alert('Ванякек забрал тебя с собой в жёлтую комнату...\n\nТы теперь здесь. Навсегда.');
+                        location.reload();
+                    }, 2500);
+                }, 1000);
+            }
+        }
+        
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes flicker {
+                0%, 100% { opacity: 1; }
+                25% { opacity: 0.7; }
+                50% { opacity: 0.4; }
+                75% { opacity: 0.8; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        function gameLoop() {
+            movePlayer();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        gameLoop();
+    </script>
+</body>
+</html>
