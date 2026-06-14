@@ -2,9 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Тёмный Коридор — 3D</title>
+<title>Тёмный Коридор — 3D (FIXED)</title>
 <style>
-    /* === Базовые сбросы и оформление === */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         background: #000;
@@ -13,9 +12,12 @@
         color: #e0e0e0;
         cursor: none;
     }
-    canvas { display: block; }
-    
-    /* === Перекрестие прицела === */
+    canvas {
+        display: block;
+        position: fixed;
+        top: 0; left: 0;
+        z-index: 1;
+    }
     #crosshair {
         position: fixed;
         top: 50%; left: 50%;
@@ -32,8 +34,6 @@
     }
     #crosshair::before { width: 14px; height: 1px; top: 1px; left: -5px; }
     #crosshair::after { width: 1px; height: 14px; top: -5px; left: 1px; }
-
-    /* === Окно диалога === */
     #dialog {
         position: fixed;
         bottom: 40px;
@@ -47,14 +47,11 @@
         display: none;
         z-index: 150;
         line-height: 1.5;
-        letter-spacing: 0.5px;
         text-align: center;
     }
-
-    /* === Подсказки === */
     #hint {
         position: fixed;
-        top: 30px;
+        top: 20px;
         left: 50%;
         transform: translateX(-50%);
         color: #aaa;
@@ -65,6 +62,7 @@
         background: rgba(0,0,0,0.5);
         padding: 8px 16px;
         border: 1px solid #444;
+        pointer-events: none;
     }
     #interactionHint {
         position: fixed;
@@ -78,9 +76,20 @@
         border: 1px solid #888;
         z-index: 140;
         display: none;
+        pointer-events: none;
     }
-
-    /* === Экран захвата курсора === */
+    #lockStatus {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        color: #ff5555;
+        font-size: 12px;
+        background: rgba(0,0,0,0.7);
+        padding: 6px 12px;
+        border: 1px solid #555;
+        z-index: 160;
+        pointer-events: none;
+    }
     #lockScreen {
         position: fixed;
         inset: 0;
@@ -98,13 +107,8 @@
         color: #b8860b;
         letter-spacing: 3px;
     }
-    #lockScreen p {
-        font-size: 16px;
-        color: #888;
-        margin: 8px 0;
-    }
-
-    /* === Финальный экран === */
+    #lockScreen p { font-size: 16px; color: #888; margin: 8px 0; }
+    #lockScreen .small { margin-top: 30px; color: #555; font-size: 13px; }
     #endScreen {
         position: fixed;
         inset: 0;
@@ -115,15 +119,12 @@
         flex-direction: column;
         z-index: 250;
         color: #2a1a0a;
-        font-family: 'Courier New', monospace;
         font-size: 22px;
         text-align: center;
         line-height: 1.8;
-        padding: 40px;
     }
     #endScreen .icon { font-size: 72px; margin-bottom: 30px; }
     #endScreen .sub { margin-top: 40px; font-size: 14px; opacity: 0.6; }
-
     @keyframes flicker {
         0%, 100% { opacity: 1; }
         25% { opacity: 0.3; }
@@ -135,45 +136,34 @@
 </head>
 <body>
 
-<!-- Экран запуска -->
 <div id="lockScreen">
     <h1>ТЁМНЫЙ КОРИДОР</h1>
     <p>WASD — движение &nbsp;|&nbsp; МЫШЬ — обзор</p>
     <p>F — фонарик &nbsp;|&nbsp; E — взаимодействие</p>
-    <p style="margin-top: 40px; color: #555;">[Нажмите, чтобы начать]</p>
+    <p class="small">[Кликните в любом месте для начала]</p>
+    <p class="small">[Если мышь не захватывается — используйте СТРЕЛКИ для обзора]</p>
 </div>
 
-<!-- Игровые элементы HUD -->
 <div id="crosshair"></div>
-<div id="hint">WASD — движение | МЫШЬ — обзор | F — фонарик | E — взаимодействие</div>
+<div id="hint">WASD — движение | МЫШЬ/СТРЕЛКИ — обзор | F — фонарик | E — взаимодействие</div>
 <div id="interactionHint"></div>
 <div id="dialog"></div>
+<div id="lockStatus">Мышь: не захвачена (СТРЕЛКИ для обзора)</div>
 
-<!-- Финальный экран -->
 <div id="endScreen">
     <div class="icon">☠</div>
     <div>Ты сел на второй стул.</div>
     <div>Рядом с ванякеком.</div>
     <div class="sub">Жёлтая комната теперь твоя. Навсегда.</div>
-    <div style="margin-top: 60px; font-size: 12px; opacity: 0.4;">[F5, чтобы попробовать снова]</div>
 </div>
 
-<!-- Three.js через CDN -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
 
 <script>
 /* =========================================================================
-   ТЁМНЫЙ КОРИДОР — 3D версия в воксельном стиле Minecraft
-   Архитектура:
-   - Scene/Renderer/Camera — базовый рендеринг
-   - PointerLockControls — управление от первого лица
-   - TextureFactory — программная генерация воксельных текстур (canvas)
-   - WorldBuilder — построение коридора и комнаты
-   - GameLogic — состояние, диалоги, взаимодействия
+   Состояние игры — единый источник истины
    ========================================================================= */
-
-// === Глобальное состояние игры ===
 const Game = {
     scene: null,
     renderer: null,
@@ -181,35 +171,30 @@ const Game = {
     controls: null,
     clock: new THREE.Clock(),
     
-    // Состояние игрока
     player: {
-        position: new THREE.Vector3(0, 1.7, 18), // высота глаз
-        velocity: new THREE.Vector3(),
+        position: new THREE.Vector3(0, 1.7, 0),
         speed: 4.0,
-        onGround: true
+        yaw: 0,   // для fallback-управления мышью/стрелками
+        pitch: 0
     },
     
-    // Флаги состояния
     flashlightOn: false,
-    location: 'corridor', // 'corridor' | 'room'
+    location: 'corridor',
     doorOpened: false,
     dialogActive: false,
     dialogStep: 0,
     gameEnded: false,
+    pointerLocked: false,
     
-    // Системы
     keys: {},
     flashlight: null,
     raycaster: new THREE.Raycaster(),
-    interactables: [], // объекты, с которыми можно взаимодействовать
+    interactables: [],
     
-    // Позиции ключевых объектов
     DOOR_POS: new THREE.Vector3(0, 1.5, -48),
-    VANYAKEK_POS: new THREE.Vector3(0, 0.8, -3),
-    ROOM_CENTER: new THREE.Vector3(0, 1.7, 0)
+    VANYAKEK_POS: new THREE.Vector3(0, 0.8, -3)
 };
 
-// === Диалоги ванякека (сохранены оригинал) ===
 const DIALOGUES = [
     { text: "*тишина... только слабое потрескивание лампы*", delay: 2500 },
     { text: "Ты... кто? Ваня? Это ты?", delay: 2500 },
@@ -226,25 +211,17 @@ const DIALOGUES = [
 ];
 
 /* =========================================================================
-   TEXTURE FACTORY
-   Генерируем воксельные текстуры программно через canvas.
-   Это даёт чёткие пиксельные блоки в стиле Minecraft без внешних файлов.
+   TEXTURE FACTORY — воксельные текстуры
    ========================================================================= */
 const TextureFactory = (() => {
-    /**
-     * Создаёт текстуру 16x16 пикселей с заданной цветовой схемой и деталями.
-     * @param {Object} spec — спецификация текстуры
-     */
     function createPixelTexture(spec) {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = 16;
         const ctx = canvas.getContext('2d');
         
-        // Базовый цвет
         ctx.fillStyle = spec.base;
         ctx.fillRect(0, 0, 16, 16);
         
-        // Варианты (шумовые пиксели)
         if (spec.variants) {
             spec.variants.forEach(v => {
                 ctx.fillStyle = v.color;
@@ -252,7 +229,6 @@ const TextureFactory = (() => {
             });
         }
         
-        // Границы
         if (spec.border) {
             ctx.fillStyle = spec.border;
             ctx.fillRect(0, 0, 16, 1);
@@ -269,9 +245,7 @@ const TextureFactory = (() => {
         return texture;
     }
     
-    // === Спецификации текстур ===
     const TEXTURES = {
-        // Тёмный камень стены коридора
         wallDark: () => createPixelTexture({
             base: '#1a1410',
             variants: [
@@ -281,118 +255,69 @@ const TextureFactory = (() => {
             ],
             border: '#0a0604'
         }),
-        
-        // Пол коридора — тёмный бетон
         floorDark: () => createPixelTexture({
             base: '#1c1c1c',
             variants: [
                 { color: '#222222', pixels: [[0,0,8,8],[8,8,8,8]] },
-                { color: '#2a2a2a', pixels: [[3,5,1,1],[12,11,1,1],[7,3,1,1]] },
+                { color: '#2a2a2a', pixels: [[3,5,1,1],[12,11,1,1]] },
                 { color: '#141414', pixels: [[10,13,2,1],[2,14,1,1]] }
             ],
             border: '#0a0a0a'
         }),
-        
-        // Жёлтый пол комнаты (как в backrooms)
         floorYellow: () => createPixelTexture({
             base: '#b8860b',
             variants: [
                 { color: '#c89419', pixels: [[0,0,8,8],[8,8,8,8]] },
-                { color: '#8b6508', pixels: [[15,0,1,16],[0,15,16,1]] },
-                { color: '#d4a017', pixels: [[3,3,1,1],[10,11,1,1]] }
+                { color: '#8b6508', pixels: [[15,0,1,16],[0,15,16,1]] }
             ],
             border: '#8b6508'
         }),
-        
-        // Жёлтые стены комнаты
         wallYellow: () => createPixelTexture({
             base: '#d4a017',
             variants: [
                 { color: '#c89419', pixels: [[0,0,8,8],[8,8,8,8]] },
-                { color: '#8b6508', pixels: [[15,0,1,16],[0,15,16,1]] },
-                { color: '#b8860b', pixels: [[5,5,1,1],[12,3,1,1]] }
+                { color: '#8b6508', pixels: [[15,0,1,16],[0,15,16,1]] }
             ],
             border: '#8b6508'
         }),
-        
-        // Дерево (дверь, стул, картина)
         wood: () => createPixelTexture({
             base: '#6b4423',
             variants: [
                 { color: '#7a5230', pixels: [[0,0,16,8]] },
-                { color: '#5a3518', pixels: [[0,8,16,1],[0,15,16,1]] },
-                { color: '#3a2510', pixels: [[3,4,1,1],[10,11,1,1],[7,2,1,1]] }
+                { color: '#5a3518', pixels: [[0,8,16,1],[0,15,16,1]] }
             ],
             border: '#3a2510'
         }),
-        
-        // Тёмное дерево (рама, ножки)
         woodDark: () => createPixelTexture({
             base: '#3a2510',
             variants: [
-                { color: '#2a1a0a', pixels: [[0,0,16,2],[0,14,16,2]] },
-                { color: '#1a1005', pixels: [[5,5,1,1],[11,11,1,1]] }
+                { color: '#2a1a0a', pixels: [[0,0,16,2],[0,14,16,2]] }
             ],
             border: '#1a1005'
         }),
-        
-        // Чёрная ткань (одежда ванякека)
         blackCloth: () => createPixelTexture({
             base: '#1a1a1a',
-            variants: [
-                { color: '#0a0a0a', pixels: [[0,0,8,8],[8,8,8,8]] },
-                { color: '#2a2a2a', pixels: [[4,4,1,1],[12,12,1,1]] }
-            ]
+            variants: [{ color: '#0a0a0a', pixels: [[0,0,8,8],[8,8,8,8]] }]
         }),
-        
-        // Кожа (лицо ванякека, серо-мёртвое)
         skinDead: () => createPixelTexture({
             base: '#6a6a7a',
-            variants: [
-                { color: '#5a5a6a', pixels: [[0,0,16,8]] },
-                { color: '#7a7a8a', pixels: [[3,3,2,2]] },
-                { color: '#4a4a5a', pixels: [[10,10,1,1]] }
-            ]
+            variants: [{ color: '#5a5a6a', pixels: [[0,0,16,8]] }]
         }),
-        
-        // Волосы ванякека
         hair: () => createPixelTexture({
             base: '#1a1a1a',
-            variants: [
-                { color: '#0a0a0a', pixels: [[2,2,2,2],[8,6,2,2]] }
-            ]
+            variants: [{ color: '#0a0a0a', pixels: [[2,2,2,2]] }]
         }),
-        
-        // Картина (коричневые тона)
         painting: () => createPixelTexture({
             base: '#4a3020',
             variants: [
                 { color: '#6a4030', pixels: [[2,4,12,8]] },
-                { color: '#8a5040', pixels: [[6,6,4,4]] },
-                { color: '#3a2010', pixels: [[0,0,16,2],[0,14,16,2],[0,0,2,16],[14,0,2,16]] }
+                { color: '#8a5040', pixels: [[6,6,4,4]] }
             ]
         }),
-        
-        // Потолок (тёмно-серый)
-        ceiling: () => createPixelTexture({
-            base: '#2a2a2a',
-            variants: [
-                { color: '#1a1a1a', pixels: [[0,0,16,16]] },
-                { color: '#3a3a3a', pixels: [[4,4,8,8]] }
-            ]
-        }),
-        
-        // Жёлтый потолок
-        ceilingYellow: () => createPixelTexture({
-            base: '#d4a017',
-            variants: [
-                { color: '#c89419', pixels: [[0,0,16,16]] },
-                { color: '#8b6508', pixels: [[15,15,1,1]] }
-            ]
-        })
+        ceiling: () => createPixelTexture({ base: '#1a1a1a' }),
+        ceilingYellow: () => createPixelTexture({ base: '#c89419' })
     };
     
-    // Кэшируем текстуры
     const cache = {};
     return {
         get(name) {
@@ -402,129 +327,68 @@ const TextureFactory = (() => {
     };
 })();
 
-/* =========================================================================
-   MATERIAL FACTORY
-   Воксельные материалы — все с NearestFilter для пиксельного вида.
-   ========================================================================= */
 const MaterialFactory = (() => {
     function make(texName) {
-        return new THREE.MeshLambertMaterial({
-            map: TextureFactory.get(texName)
-        });
+        return new THREE.MeshLambertMaterial({ map: TextureFactory.get(texName) });
     }
-    function makeMulti(texNames) {
-        // Для куба с разными гранями: +X, -X, +Y, -Y, +Z, -Z
-        return texNames.map(name => new THREE.MeshLambertMaterial({
-            map: TextureFactory.get(name)
-        }));
-    }
-    return { make, makeMulti };
+    return { make };
 })();
 
 /* =========================================================================
    WORLD BUILDER
-   Строим воксельный мир — коридор и комнату.
-   Все размеры в блоках (1 блок = 1 метр).
    ========================================================================= */
 const WorldBuilder = (() => {
     const BLOCK = 1;
     
-    /**
-     * Создаёт блок (воксель) в указанной позиции.
-     */
     function block(x, y, z, material, scale = BLOCK) {
         const geo = new THREE.BoxGeometry(scale, scale, scale);
         const mesh = new THREE.Mesh(geo, material);
         mesh.position.set(x, y, z);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
         return mesh;
     }
     
-    /**
-     * Создаёт группу блоков (для эффективного построения стен).
-     */
-    function wallStrip(start, end, axis, material, yOffset = 0) {
-        const group = new THREE.Group();
-        const [sx, sy, sz] = start;
-        const [ex, ey, ez] = end;
-        
-        if (axis === 'x') {
-            for (let x = sx; x <= ex; x += BLOCK) {
-                for (let y = sy; y <= ey; y += BLOCK) {
-                    group.add(block(x, y + yOffset, sz, material));
-                }
-            }
-        } else if (axis === 'z') {
-            for (let z = sz; z <= ez; z += BLOCK) {
-                for (let y = sy; y <= ey; y += BLOCK) {
-                    group.add(block(sx, y + yOffset, z, material));
-                }
-            }
-        }
-        return group;
-    }
-    
-    /**
-     * Строит коридор.
-     * Размеры: 5 блоков шириной, 3 высотой, 50 длиной.
-     */
     function buildCorridor(scene) {
         const corridor = new THREE.Group();
-        const length = 50;
-        const width = 5;
-        const height = 3;
+        const length = 50, width = 5, height = 3;
         const halfW = Math.floor(width / 2);
         
         const wallMat = MaterialFactory.make('wallDark');
         const floorMat = MaterialFactory.make('floorDark');
         const ceilMat = MaterialFactory.make('ceiling');
         
-        // Пол — полоса блоков
-        for (let z = 0; z > -length; z -= BLOCK) {
+        // Пол
+        for (let z = 5; z >= -length; z -= BLOCK) {
             for (let x = -halfW; x <= halfW; x += BLOCK) {
                 corridor.add(block(x, 0, z, floorMat));
             }
         }
-        
         // Потолок
-        for (let z = 0; z > -length; z -= BLOCK) {
+        for (let z = 5; z >= -length; z -= BLOCK) {
             for (let x = -halfW; x <= halfW; x += BLOCK) {
                 corridor.add(block(x, height + 1, z, ceilMat));
             }
         }
-        
-        // Левая стена
-        for (let z = 0; z >= -length; z -= BLOCK) {
+        // Стены
+        for (let z = 5; z >= -length; z -= BLOCK) {
             for (let y = 1; y <= height; y += BLOCK) {
                 corridor.add(block(-halfW - 1, y, z, wallMat));
-            }
-        }
-        
-        // Правая стена
-        for (let z = 0; z >= -length; z -= BLOCK) {
-            for (let y = 1; y <= height; y += BLOCK) {
                 corridor.add(block(halfW + 1, y, z, wallMat));
             }
         }
-        
-        // Задняя стена (с дверным проёмом)
+        // Задняя стена с проёмом
         for (let x = -halfW; x <= halfW; x += BLOCK) {
             for (let y = 1; y <= height; y += BLOCK) {
-                // Дверной проём: x от -1 до 1, y 1-3
                 if (Math.abs(x) <= 1 && y <= 3) continue;
                 corridor.add(block(x, y, -length, wallMat));
             }
         }
-        
-        // Передняя стена (за спиной игрока)
+        // Передняя
         for (let x = -halfW; x <= halfW; x += BLOCK) {
             for (let y = 1; y <= height; y += BLOCK) {
-                corridor.add(block(x, y, 1, wallMat));
+                corridor.add(block(x, y, 6, wallMat));
             }
         }
         
-        // Дверь — отдельный объект для взаимодействия
         const door = buildDoor();
         door.position.set(0, 1.5, -length + 0.5);
         door.userData = { type: 'door' };
@@ -535,105 +399,76 @@ const WorldBuilder = (() => {
         return corridor;
     }
     
-    /**
-     * Строит дверь из блоков дерева.
-     */
     function buildDoor() {
         const door = new THREE.Group();
         const woodMat = MaterialFactory.make('wood');
-        
-        // Рама двери (тёмное дерево)
         const darkWood = MaterialFactory.make('woodDark');
+        
         door.add(block(-1.2, 0, 0, darkWood, 0.2));
         door.add(block(1.2, 0, 0, darkWood, 0.2));
         door.add(block(0, 1.2, 0, darkWood, 0.2));
         
-        // Само дверное полотно (сдвинуто, чтобы заполнить проём)
         const panel = block(0, 0, 0, woodMat, 2.2);
         panel.scale.y = 2.4;
         door.add(panel);
         
-        // Ручка
-        const handleMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
-        const handle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.15), handleMat);
+        const handle = new THREE.Mesh(
+            new THREE.BoxGeometry(0.15, 0.1, 0.15),
+            new THREE.MeshBasicMaterial({ color: 0xffcc00 })
+        );
         handle.position.set(0.7, 0, 0.15);
         door.add(handle);
-        
         return door;
     }
     
-    /**
-     * Строит жёлтую комнату.
-     * Размеры: 15x15 блоков, высота 4.
-     */
     function buildRoom(scene) {
         const room = new THREE.Group();
-        const size = 15;
-        const height = 4;
+        const size = 15, height = 4;
         const halfS = Math.floor(size / 2);
         
         const wallMat = MaterialFactory.make('wallYellow');
         const floorMat = MaterialFactory.make('floorYellow');
         const ceilMat = MaterialFactory.make('ceilingYellow');
         
-        // Пол
         for (let x = -halfS; x <= halfS; x += BLOCK) {
             for (let z = -halfS; z <= halfS; z += BLOCK) {
                 room.add(block(x, 0, z, floorMat));
-            }
-        }
-        
-        // Потолок
-        for (let x = -halfS; x <= halfS; x += BLOCK) {
-            for (let z = -halfS; z <= halfS; z += BLOCK) {
                 room.add(block(x, height + 1, z, ceilMat));
             }
         }
-        
-        // Четыре стены
-        // Передняя (с проёмом)
         for (let x = -halfS; x <= halfS; x += BLOCK) {
             for (let y = 1; y <= height; y += BLOCK) {
-                if (Math.abs(x) <= 1 && y <= 3) continue;
-                room.add(block(x, y, -halfS - 1, wallMat));
+                if (Math.abs(x) <= 1 && y <= 3) {
+                    room.add(block(x, y, halfS + 1, wallMat));
+                } else {
+                    room.add(block(x, y, -halfS - 1, wallMat));
+                    room.add(block(x, y, halfS + 1, wallMat));
+                }
             }
         }
-        // Задняя
-        for (let x = -halfS; x <= halfS; x += BLOCK) {
-            for (let y = 1; y <= height; y += BLOCK) {
-                room.add(block(x, y, halfS + 1, wallMat));
-            }
-        }
-        // Левая
         for (let z = -halfS; z <= halfS; z += BLOCK) {
             for (let y = 1; y <= height; y += BLOCK) {
                 room.add(block(-halfS - 1, y, z, wallMat));
-            }
-        }
-        // Правая
-        for (let z = -halfS; z <= halfS; z += BLOCK) {
-            for (let y = 1; y <= height; y += BLOCK) {
                 room.add(block(halfS + 1, y, z, wallMat));
             }
         }
         
-        // Картина на стене
         const painting = buildPainting();
         painting.position.set(-3, 2.5, halfS + 0.1);
         painting.rotation.y = Math.PI;
         room.add(painting);
         
-        // Лампа на потолке (блок с эмиссивом)
-        const lamp = buildLamp();
+        const lamp = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 0.2, 0.6),
+            new THREE.MeshBasicMaterial({ color: 0xffee88 })
+        );
         lamp.position.set(0, height, 0);
         room.add(lamp);
         
-        // Стул
         const chair = buildChair();
         chair.position.set(Game.VANYAKEK_POS.x, 0, Game.VANYAKEK_POS.z);
         room.add(chair);
         
-        // Ванякек (сидит на стуле)
         const vanyak = buildVanyak();
         vanyak.position.copy(Game.VANYAKEK_POS);
         vanyak.userData = { type: 'vanyak' };
@@ -641,65 +476,29 @@ const WorldBuilder = (() => {
         Game.interactables.push(vanyak);
         Game.vanyak = vanyak;
         
-        // Второй стул (на который можно "сесть" в концовке)
         const chair2 = buildChair();
         chair2.position.set(1.5, 0, Game.VANYAKEK_POS.z);
         room.add(chair2);
         
-        // Атмосферный свет для жёлтой комнаты (будет включён позже)
         const roomLight = new THREE.PointLight(0xffaa33, 0, 15);
         roomLight.position.set(0, height - 0.5, 0);
         room.add(roomLight);
         Game.roomLight = roomLight;
         
-        // Ambient для комнаты
-        const ambientRoom = new THREE.AmbientLight(0xffaa33, 0);
-        room.add(ambientRoom);
-        Game.roomAmbient = ambientRoom;
-        
         scene.add(room);
-        room.visible = false; // скрыта по умолчанию
+        room.visible = false;
         return room;
     }
     
     function buildPainting() {
         const group = new THREE.Group();
         const frameMat = MaterialFactory.make('woodDark');
-        const canvasMat = new THREE.MeshBasicMaterial({
-            map: TextureFactory.get('painting')
-        });
-        
-        // Рама
+        const canvasMat = new THREE.MeshBasicMaterial({ map: TextureFactory.get('painting') });
         group.add(block(-1.05, 0, 0, frameMat, 0.1));
         group.add(block(1.05, 0, 0, frameMat, 0.1));
         group.add(block(0, 0.55, 0, frameMat, 0.1));
         group.add(block(0, -0.55, 0, frameMat, 0.1));
-        
-        // Полотно
-        const canvas = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 1, 0.05),
-            canvasMat
-        );
-        group.add(canvas);
-        
-        return group;
-    }
-    
-    function buildLamp() {
-        const group = new THREE.Group();
-        // Корпус лампы
-        const body = new THREE.Mesh(
-            new THREE.BoxGeometry(0.6, 0.2, 0.6),
-            new THREE.MeshBasicMaterial({ color: 0xffee88 })
-        );
-        group.add(body);
-        // Шнур
-        const wire = new THREE.Mesh(
-            new THREE.BoxGeometry(0.05, 1, 0.05),
-            new THREE.MeshBasicMaterial({ color: 0x222222 })
-        );
-        wire.position.y = 0.6;
-        group.add(wire);
+        group.add(new THREE.Mesh(new THREE.BoxGeometry(2, 1, 0.05), canvasMat));
         return group;
     }
     
@@ -707,30 +506,15 @@ const WorldBuilder = (() => {
         const chair = new THREE.Group();
         const woodMat = MaterialFactory.make('wood');
         const darkMat = MaterialFactory.make('woodDark');
-        
-        // Ножки (4 шт)
-        const legPositions = [
-            [-0.4, 0.4, -0.4],
-            [0.4, 0.4, -0.4],
-            [-0.4, 0.4, 0.4],
-            [0.4, 0.4, 0.4]
-        ];
-        legPositions.forEach(([x, y, z]) => {
-            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), darkMat);
-            leg.position.set(x, y, z);
-            chair.add(leg);
+        [[-0.4,0.4,-0.4],[0.4,0.4,-0.4],[-0.4,0.4,0.4],[0.4,0.4,0.4]].forEach(([x,y,z]) => {
+            chair.add(new THREE.Mesh(new THREE.BoxGeometry(0.1,0.8,0.1), darkMat).translateX(x).translateY(y).translateZ(z));
         });
-        
-        // Сиденье
         const seat = new THREE.Mesh(new THREE.BoxGeometry(1, 0.1, 1), woodMat);
         seat.position.y = 0.85;
         chair.add(seat);
-        
-        // Спинка
         const back = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 0.1), woodMat);
         back.position.set(0, 1.3, -0.45);
         chair.add(back);
-        
         return chair;
     }
     
@@ -740,72 +524,54 @@ const WorldBuilder = (() => {
         const skinMat = MaterialFactory.make('skinDead');
         const hairMat = MaterialFactory.make('hair');
         
-        // Торс (сидя)
         const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.4), clothMat);
         torso.position.y = 1.3;
         vanyak.add(torso);
         
-        // Руки (свисают)
         const armL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.18), clothMat);
         armL.position.set(-0.45, 1.0, 0);
         vanyak.add(armL);
-        const armR = armL.clone();
-        armR.position.x = 0.45;
+        const armR = armL.clone(); armR.position.x = 0.45;
         vanyak.add(armR);
         
-        // Ладони
-        const palmMat = skinMat.clone();
-        const palmL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), palmMat);
+        const palmL = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.15,0.15), skinMat);
         palmL.position.set(-0.45, 0.6, 0);
         vanyak.add(palmL);
-        const palmR = palmL.clone();
-        palmR.position.x = 0.45;
+        const palmR = palmL.clone(); palmR.position.x = 0.45;
         vanyak.add(palmR);
         
-        // Ноги (согнуты, сидит)
-        const legMat = clothMat.clone();
-        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.4), legMat);
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.7,0.4), clothMat);
         legL.position.set(-0.2, 0.7, 0.3);
         vanyak.add(legL);
-        const legR = legL.clone();
-        legR.position.x = 0.2;
+        const legR = legL.clone(); legR.position.x = 0.2;
         vanyak.add(legR);
         
-        // Ботинки
-        const bootMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
-        const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.15, 0.35), bootMat);
+        const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.15,0.35), new THREE.MeshLambertMaterial({color:0x000000}));
         bootL.position.set(-0.2, 0.3, 0.45);
         vanyak.add(bootL);
-        const bootR = bootL.clone();
-        bootR.position.x = 0.2;
+        const bootR = bootL.clone(); bootR.position.x = 0.2;
         vanyak.add(bootR);
         
-        // Голова — отдельная группа для анимации подъёма
         const head = new THREE.Group();
         head.position.y = 1.9;
-        head.rotation.x = 0.6; // наклонена вниз
+        head.rotation.x = 0.6;
         
-        // Череп (лицо)
         const skull = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.45), skinMat);
         head.add(skull);
         
-        // Волосы (сверху)
         const hair = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.15, 0.47), hairMat);
         hair.position.y = 0.25;
         head.add(hair);
         
-        // Глаза — X (мёртвые), из маленьких блоков
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
         const eyeGroup = new THREE.Group();
         eyeGroup.position.z = 0.24;
         
-        // Левый X
         const eL1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.02), eyeMat);
         eL1.position.set(-0.1, 0.05, 0); eL1.rotation.z = Math.PI/4;
         const eL2 = eL1.clone(); eL2.rotation.z = -Math.PI/4;
         eyeGroup.add(eL1, eL2);
         
-        // Правый X
         const eR1 = eL1.clone(); eR1.position.x = 0.1;
         const eR2 = eL2.clone(); eR2.position.x = 0.1;
         eyeGroup.add(eR1, eR2);
@@ -813,7 +579,6 @@ const WorldBuilder = (() => {
         head.add(eyeGroup);
         Game.vanyakEyes = eyeGroup;
         
-        // Рот
         const mouth = new THREE.Mesh(
             new THREE.BoxGeometry(0.15, 0.03, 0.02),
             new THREE.MeshBasicMaterial({ color: 0x2a1a1a })
@@ -823,7 +588,6 @@ const WorldBuilder = (() => {
         
         vanyak.add(head);
         Game.vanyakHead = head;
-        
         return vanyak;
     }
     
@@ -832,33 +596,27 @@ const WorldBuilder = (() => {
 
 /* =========================================================================
    GAME LOGIC
-   Логика игры, диалогов, переходов между сценами.
    ========================================================================= */
 const GameLogic = (() => {
     function initScene() {
-        // Renderer
         Game.renderer = new THREE.WebGLRenderer({ antialias: false });
         Game.renderer.setSize(window.innerWidth, window.innerHeight);
-        Game.renderer.setPixelRatio(1); // пиксель-арт — без масштабирования
+        Game.renderer.setPixelRatio(1);
         Game.renderer.setClearColor(0x000000, 1);
         document.body.appendChild(Game.renderer.domElement);
         
-        // Scene
         Game.scene = new THREE.Scene();
-        // Глубокий туман для атмосферы — дальше 20 метров ничего не видно
         Game.scene.fog = new THREE.Fog(0x000000, 0, 25);
         
-        // Camera
         Game.camera = new THREE.PerspectiveCamera(
             75, window.innerWidth / window.innerHeight, 0.1, 100
         );
         Game.camera.position.copy(Game.player.position);
+        Game.camera.rotation.order = 'YXZ'; // важно для fallback yaw/pitch
         
-        // Ambient light (минимальный — в коридоре очень темно)
-        Game.ambientLight = new THREE.AmbientLight(0x404040, 0.08);
+        Game.ambientLight = new THREE.AmbientLight(0x404040, 0.15);
         Game.scene.add(Game.ambientLight);
         
-        // Фонарик — SpotLight, привязанный к камере
         Game.flashlight = new THREE.SpotLight(0xffeecc, 0, 15, Math.PI / 5, 0.4, 1.5);
         Game.flashlight.position.set(0, 0, 0);
         Game.flashlight.target.position.set(0, 0, -1);
@@ -866,47 +624,78 @@ const GameLogic = (() => {
         Game.camera.add(Game.flashlight.target);
         Game.scene.add(Game.camera);
         
-        // Построение миров
         Game.corridor = WorldBuilder.buildCorridor(Game.scene);
         Game.room = WorldBuilder.buildRoom(Game.scene);
         
-        // Controls
-        Game.controls = new THREE.PointerLockControls(Game.camera, document.body);
+        // Пытаемся создать PointerLockControls
+        try {
+            Game.controls = new THREE.PointerLockControls(Game.camera, document.body);
+            Game.controls.addEventListener('lock', () => {
+                Game.pointerLocked = true;
+                updateLockStatus();
+                document.getElementById('lockScreen').style.display = 'none';
+            });
+            Game.controls.addEventListener('unlock', () => {
+                Game.pointerLocked = false;
+                updateLockStatus();
+                if (!Game.gameEnded) {
+                    document.getElementById('lockScreen').style.display = 'flex';
+                }
+            });
+        } catch (e) {
+            console.warn('PointerLockControls недоступны, используем fallback:', e);
+            Game.controls = null;
+        }
         
-        // Обработчики
         setupEventListeners();
+        updateLockStatus();
+    }
+    
+    function updateLockStatus() {
+        const status = document.getElementById('lockStatus');
+        if (Game.pointerLocked) {
+            status.textContent = 'Мышь: захвачена ✓';
+            status.style.color = '#55ff55';
+        } else {
+            status.textContent = 'Мышь: не захвачена (СТРЕЛКИ для обзора)';
+            status.style.color = '#ff5555';
+        }
     }
     
     function setupEventListeners() {
-        // Запуск игры
-        document.getElementById('lockScreen').addEventListener('click', () => {
-            Game.controls.lock();
-        });
-        
-        Game.controls.addEventListener('lock', () => {
-            document.getElementById('lockScreen').style.display = 'none';
-        });
-        
-        Game.controls.addEventListener('unlock', () => {
-            if (!Game.gameEnded) {
-                document.getElementById('lockScreen').style.display = 'flex';
+        // Клик в ЛЮБОМ месте — пытаемся захватить курсор
+        document.addEventListener('click', (e) => {
+            if (Game.gameEnded) return;
+            
+            if (!Game.pointerLocked) {
+                if (Game.controls && typeof Game.controls.lock === 'function') {
+                    try {
+                        Game.controls.lock();
+                    } catch (err) {
+                        console.warn('Pointer lock не сработал, используем стрелки:', err);
+                    }
+                }
+                document.getElementById('lockScreen').style.display = 'none';
             }
         });
         
-        // Клавиатура
         document.addEventListener('keydown', (e) => {
             const k = e.key.toLowerCase();
             Game.keys[k] = true;
             
             if (k === 'f') toggleFlashlight();
             if (k === 'e') handleInteraction();
+            
+            // Предотвращаем прокрутку стрелками
+            if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) {
+                e.preventDefault();
+            }
         });
         
         document.addEventListener('keyup', (e) => {
             Game.keys[e.key.toLowerCase()] = false;
         });
         
-        // Ресайз окна
         window.addEventListener('resize', () => {
             Game.camera.aspect = window.innerWidth / window.innerHeight;
             Game.camera.updateProjectionMatrix();
@@ -920,56 +709,46 @@ const GameLogic = (() => {
         Game.flashlight.intensity = Game.flashlightOn ? 2.5 : 0;
     }
     
-    /**
-     * Взаимодействие через raycaster — смотрим, на что игрок указывает.
-     */
     function handleInteraction() {
-        if (Game.dialogActive || !Game.controls.isLocked) return;
+        if (Game.dialogActive) return;
         
         Game.raycaster.setFromCamera(new THREE.Vector2(0, 0), Game.camera);
-        Game.raycaster.far = 3.0;
+        Game.raycaster.far = 3.5;
         
-        // Собираем все меши из интерактивных групп
         const allMeshes = [];
         Game.interactables.forEach(obj => {
-            obj.traverse(child => {
-                if (child.isMesh) allMeshes.push(child);
-            });
+            if (!obj.visible) return;
+            obj.traverse(child => { if (child.isMesh) allMeshes.push(child); });
         });
         
         const hits = Game.raycaster.intersectObjects(allMeshes, false);
         if (hits.length === 0) return;
         
-        // Находим родительскую интерактивную группу
         let target = hits[0].object;
         while (target && !target.userData.type) target = target.parent;
         if (!target) return;
         
         if (target.userData.type === 'door' && !Game.doorOpened && Game.location === 'corridor') {
-            openDoor();
+            openDoor(target);
         } else if (target.userData.type === 'vanyak' && Game.location === 'room') {
             startDialogue();
         }
     }
     
-    function openDoor() {
+    function openDoor(door) {
         Game.doorOpened = true;
         showDialog("*дверь со скрипом открывается...*");
         
-        // Анимация двери — поворот
-        const door = Game.interactables.find(o => o.userData.type === 'door');
-        if (door) {
-            const targetRot = Math.PI / 2;
-            const startRot = door.rotation.y;
-            const startTime = performance.now();
-            const duration = 800;
-            
-            (function animDoor() {
-                const t = Math.min(1, (performance.now() - startTime) / duration);
-                door.rotation.y = startRot + (targetRot - startRot) * t;
-                if (t < 1) requestAnimationFrame(animDoor);
-            })();
-        }
+        const startRot = door.rotation.y;
+        const targetRot = Math.PI / 2;
+        const startTime = performance.now();
+        const duration = 800;
+        
+        (function animDoor() {
+            const t = Math.min(1, (performance.now() - startTime) / duration);
+            door.rotation.y = startRot + (targetRot - startRot) * t;
+            if (t < 1) requestAnimationFrame(animDoor);
+        })();
         
         setTimeout(() => {
             hideDialog();
@@ -982,23 +761,18 @@ const GameLogic = (() => {
         Game.flashlightOn = false;
         Game.flashlight.intensity = 0;
         
-        // Телепорт игрока в комнату
-        Game.camera.position.set(0, 1.7, -6);
+        Game.camera.position.set(0, 1.7, 5);
+        Game.player.yaw = 0;
+        Game.player.pitch = 0;
+        Game.camera.rotation.set(0, 0, 0);
         
-        // Прячем коридор, показываем комнату
         Game.corridor.visible = false;
         Game.room.visible = true;
         
-        // Меняем туман — в комнате светло, виден весь интерьер
         Game.scene.fog = new THREE.Fog(0x3a2800, 1, 30);
         Game.scene.background = new THREE.Color(0x3a2800);
-        
-        // Включаем освещение комнаты
         Game.roomLight.intensity = 1.8;
-        Game.roomAmbient.intensity = 0.6;
-        
-        // Убираем глобальный ambient (комната светится сама)
-        Game.ambientLight.intensity = 0.3;
+        Game.ambientLight.intensity = 0.4;
         
         setTimeout(() => {
             showDialog("*жёлтый свет. запах пыли и чего-то старого...*");
@@ -1024,32 +798,29 @@ const GameLogic = (() => {
         showDialog(line.text);
         
         if (line.action === 'lift_head' && Game.vanyakHead) {
-            // Плавно поднимаем голову
             const startRot = Game.vanyakHead.rotation.x;
-            const targetRot = 0.0;
             const startTime = performance.now();
             const duration = 1500;
             (function animHead() {
                 const t = Math.min(1, (performance.now() - startTime) / duration);
-                Game.vanyakHead.rotation.x = startRot + (targetRot - startRot) * t;
+                Game.vanyakHead.rotation.x = startRot * (1 - t);
                 if (t < 1) requestAnimationFrame(animHead);
             })();
         }
         
         if (line.action === 'open_eyes' && Game.vanyakEyes) {
-            // Заменяем X-глаза на белые с красными зрачками
-            Game.vanyakEyes.children.forEach(c => Game.vanyakEyes.remove(c));
+            while (Game.vanyakEyes.children.length > 0) {
+                Game.vanyakEyes.remove(Game.vanyakEyes.children[0]);
+            }
             const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
             const redMat = new THREE.MeshBasicMaterial({ color: 0xff2020 });
             
-            // Левый глаз
-            const wL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, 0.02), whiteMat);
+            const wL = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.08,0.02), whiteMat);
             wL.position.set(-0.1, 0.05, 0);
-            const rL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), redMat);
+            const rL = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.05,0.02), redMat);
             rL.position.set(-0.1, 0.05, 0.01);
             Game.vanyakEyes.add(wL, rL);
             
-            // Правый глаз
             const wR = wL.clone(); wR.position.x = 0.1;
             const rR = rL.clone(); rR.position.x = 0.1;
             Game.vanyakEyes.add(wR, rR);
@@ -1064,13 +835,11 @@ const GameLogic = (() => {
         Game.gameEnded = true;
         
         setTimeout(() => {
-            // Мерцание экрана
             document.body.classList.add('flicker');
             showDialog("*что-то холодное касается твоей руки...*");
             
             setTimeout(() => {
                 document.body.classList.remove('flicker');
-                // Fade out рендерера
                 Game.renderer.domElement.style.transition = 'opacity 3s';
                 Game.renderer.domElement.style.opacity = '0';
                 
@@ -1080,6 +849,7 @@ const GameLogic = (() => {
                     document.getElementById('hint').style.display = 'none';
                     document.getElementById('interactionHint').style.display = 'none';
                     document.getElementById('dialog').style.display = 'none';
+                    document.getElementById('lockStatus').style.display = 'none';
                     document.getElementById('endScreen').style.display = 'flex';
                 }, 3500);
             }, 2500);
@@ -1087,37 +857,43 @@ const GameLogic = (() => {
     }
     
     function showDialog(text) {
-        const d = document.getElementById('dialog');
-        d.textContent = text;
-        d.style.display = 'block';
+        document.getElementById('dialog').textContent = text;
+        document.getElementById('dialog').style.display = 'block';
     }
     
     function hideDialog() {
         document.getElementById('dialog').style.display = 'none';
     }
     
-    /**
-     * Главный игровой цикл.
-     */
     function update() {
         requestAnimationFrame(update);
         const delta = Game.clock.getDelta();
         
-        if (!Game.controls.isLocked || Game.gameEnded) {
+        if (Game.gameEnded) {
             Game.renderer.render(Game.scene, Game.camera);
             return;
         }
         
-        // === Движение игрока ===
+        // === FALLBACK: управление стрелками, если pointer lock не работает ===
+        if (!Game.pointerLocked) {
+            const rotSpeed = 2.0 * delta;
+            if (Game.keys['arrowleft'])  Game.player.yaw += rotSpeed;
+            if (Game.keys['arrowright']) Game.player.yaw -= rotSpeed;
+            if (Game.keys['arrowup'])    Game.player.pitch = Math.min(Math.PI/2 - 0.1, Game.player.pitch + rotSpeed);
+            if (Game.keys['arrowdown'])  Game.player.pitch = Math.max(-Math.PI/2 + 0.1, Game.player.pitch - rotSpeed);
+            
+            Game.camera.rotation.y = Game.player.yaw;
+            Game.camera.rotation.x = Game.player.pitch;
+        }
+        
+        // === Движение WASD ===
         if (!Game.dialogActive) {
             const dir = new THREE.Vector3();
             const right = new THREE.Vector3();
             
-            // Направление камеры на плоскости XZ
             Game.camera.getWorldDirection(dir);
             dir.y = 0;
             dir.normalize();
-            
             right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
             
             const moveVec = new THREE.Vector3();
@@ -1128,22 +904,17 @@ const GameLogic = (() => {
             
             if (moveVec.lengthSq() > 0) {
                 moveVec.normalize().multiplyScalar(Game.player.speed * delta);
-                
-                // Простая проверка коллизий по границам локации
                 const newX = Game.camera.position.x + moveVec.x;
                 const newZ = Game.camera.position.z + moveVec.z;
                 
                 let canMove = true;
                 if (Game.location === 'corridor') {
-                    const halfW = 2.0;
-                    if (Math.abs(newX) > halfW) canMove = false;
-                    // Не выходим за длину коридора (но можно пройти в дверь, если она открыта)
-                    if (newZ > 0.5) canMove = false;
-                    if (newZ < -50.5 && !(Game.doorOpened && Math.abs(newX) < 1.0)) canMove = false;
+                    if (Math.abs(newX) > 2.2) canMove = false;
+                    if (newZ > 5.0) canMove = false;
+                    if (newZ < -50.5 && !(Game.doorOpened && Math.abs(newX) < 1.2)) canMove = false;
                 } else {
-                    const halfS = 6.5;
-                    if (Math.abs(newX) > halfS) canMove = false;
-                    if (Math.abs(newZ) > halfS) canMove = false;
+                    if (Math.abs(newX) > 7.0) canMove = false;
+                    if (Math.abs(newZ) > 7.0) canMove = false;
                 }
                 
                 if (canMove) {
@@ -1151,15 +922,10 @@ const GameLogic = (() => {
                     Game.camera.position.z = newZ;
                 }
             }
-        }
-        
-        // === Head bob (покачивание головы при ходьбе) ===
-        if (!Game.dialogActive) {
-            const speed = Math.hypot(
-                Game.keys['w'] || Game.keys['s'] ? 1 : 0,
-                Game.keys['a'] || Game.keys['d'] ? 1 : 0
-            );
-            if (speed > 0) {
+            
+            // Head bob
+            const moving = Game.keys['w'] || Game.keys['s'] || Game.keys['a'] || Game.keys['d'];
+            if (moving) {
                 const bob = Math.sin(performance.now() * 0.008) * 0.03;
                 Game.camera.position.y = 1.7 + bob;
             } else {
@@ -1167,38 +933,27 @@ const GameLogic = (() => {
             }
         }
         
-        // === Интерактивная подсказка ===
         updateInteractionHint();
         
-        // === Мерцание лампы в комнате (атмосферный эффект) ===
         if (Game.location === 'room' && Game.roomLight) {
             const t = performance.now() * 0.01;
-            const flicker = 1.6 + Math.sin(t * 7.3) * 0.15 + Math.sin(t * 13.7) * 0.08;
-            Game.roomLight.intensity = flicker;
+            Game.roomLight.intensity = 1.6 + Math.sin(t * 7.3) * 0.15 + Math.sin(t * 13.7) * 0.08;
         }
         
         Game.renderer.render(Game.scene, Game.camera);
     }
     
-    /**
-     * Показывает подсказку при наведении на интерактивный объект.
-     */
     function updateInteractionHint() {
         const hint = document.getElementById('interactionHint');
-        if (Game.dialogActive) {
-            hint.style.display = 'none';
-            return;
-        }
+        if (Game.dialogActive) { hint.style.display = 'none'; return; }
         
         Game.raycaster.setFromCamera(new THREE.Vector2(0, 0), Game.camera);
-        Game.raycaster.far = 3.0;
+        Game.raycaster.far = 3.5;
         
         const allMeshes = [];
         Game.interactables.forEach(obj => {
             if (!obj.visible) return;
-            obj.traverse(child => {
-                if (child.isMesh) allMeshes.push(child);
-            });
+            obj.traverse(child => { if (child.isMesh) allMeshes.push(child); });
         });
         
         const hits = Game.raycaster.intersectObjects(allMeshes, false);
@@ -1213,27 +968,19 @@ const GameLogic = (() => {
                 } else if (target.userData.type === 'vanyak' && Game.location === 'room') {
                     text = '[E] Поговорить';
                 }
-                
                 if (text) {
                     hint.textContent = text;
                     hint.style.display = 'block';
-                } else {
-                    hint.style.display = 'none';
+                    return;
                 }
-            } else {
-                hint.style.display = 'none';
             }
-        } else {
-            hint.style.display = 'none';
         }
+        hint.style.display = 'none';
     }
     
     return { initScene, update };
 })();
 
-/* =========================================================================
-   BOOTSTRAP — запуск игры
-   ========================================================================= */
 window.addEventListener('load', () => {
     GameLogic.initScene();
     GameLogic.update();
