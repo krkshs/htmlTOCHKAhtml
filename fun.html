@@ -1,1 +1,361 @@
-хуууууй
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>АХУЕННЫЙ ПИЗДЕЦ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background: #0a0a12;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            overflow-x: hidden;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">🌈</text></svg>') 16 16, auto;
+        }
+
+        /* Анимированный радужный фон */
+        .rainbow-bg {
+            position: fixed; inset: 0; z-index: 0;
+            background: linear-gradient(90deg, 
+                #ff0000, #ff8800, #ffff00, #00ff00, #0088ff, #8800ff, #ff0088, #ff0000);
+            background-size: 800% 100%;
+            animation: bgFlow 3s linear infinite;
+            opacity: 0.15;
+        }
+        @keyframes bgFlow { 0%{background-position:0% 50%} 100%{background-position:800% 50%} }
+
+        canvas#confetti { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+        .content {
+            position: relative; z-index: 2;
+            max-width: 900px; margin: 0 auto;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        /* Заголовок с безумной анимацией */
+        h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            background: linear-gradient(90deg, #ff0000, #ff8800, #ffff00, #00ff00, #0088ff, #8800ff, #ff0088);
+            background-size: 400% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbowText 1.5s linear infinite, titleBounce 0.8s ease-in-out infinite;
+            text-shadow: none;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
+            margin-bottom: 10px;
+        }
+        @keyframes rainbowText { 0%{background-position:0% 50%} 100%{background-position:400% 50%} }
+        @keyframes titleBounce { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-15px) rotate(2deg)} }
+
+        .subtitle {
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            color: #fff;
+            animation: subtitleFlash 0.5s ease-in-out infinite alternate;
+            margin-bottom: 50px;
+        }
+        @keyframes subtitleFlash { 0%{opacity:0.7; transform:scale(1)} 100%{opacity:1; transform:scale(1.05)} }
+
+        /* Карточки с разными анимациями */
+        .cards { display: flex; flex-direction: column; gap: 30px; margin-bottom: 50px; }
+
+        .card {
+            background: rgba(255,255,255,0.08);
+            border: 2px solid;
+            border-radius: 20px;
+            padding: 35px 30px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        .card:hover { transform: scale(1.03) rotate(1deg); }
+
+        .card:nth-child(1) {
+            border-color: #ff0088;
+            animation: cardWiggle1 2s ease-in-out infinite;
+        }
+        .card:nth-child(2) {
+            border-color: #00ff00;
+            animation: cardWiggle2 2.3s ease-in-out infinite;
+        }
+        .card:nth-child(3) {
+            border-color: #0088ff;
+            animation: cardWiggle3 1.8s ease-in-out infinite;
+        }
+        .card:nth-child(4) {
+            border-color: #ffff00;
+            animation: cardWiggle4 2.5s ease-in-out infinite;
+        }
+
+        @keyframes cardWiggle1 { 0%,100%{transform:rotate(-1deg)} 50%{transform:rotate(1deg)} }
+        @keyframes cardWiggle2 { 0%,100%{transform:translateX(-3px)} 50%{transform:translateX(3px)} }
+        @keyframes cardWiggle3 { 0%,100%{transform:rotate(1deg) translateY(-2px)} 50%{transform:rotate(-1deg) translateY(2px)} }
+        @keyframes cardWiggle4 { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+
+        .card::before {
+            content: "";
+            position: absolute; top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.1), transparent 30%);
+            animation: cardShine 3s linear infinite;
+        }
+        @keyframes cardShine { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+        .card:nth-child(1) .card-title { color: #ff0088; }
+        .card:nth-child(2) .card-title { color: #00ff00; }
+        .card:nth-child(3) .card-title { color: #0088ff; }
+        .card:nth-child(4) .card-title { color: #ffff00; }
+
+        .card p {
+            color: rgba(255,255,255,0.85);
+            line-height: 1.8;
+            font-size: 1.1rem;
+            position: relative; z-index: 1;
+        }
+
+        /* Эмодзи дождь */
+        .emoji-rain {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 1;
+            overflow: hidden;
+        }
+        .emoji {
+            position: absolute;
+            font-size: 2rem;
+            animation: emojiFall linear infinite;
+            opacity: 0.7;
+        }
+        @keyframes emojiFall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.7; }
+            90% { opacity: 0.7; }
+            100% { transform: translateY(calc(100vh + 100px)) rotate(720deg); opacity: 0; }
+        }
+
+        /* Мерцающие звёзды */
+        .sparkle {
+            position: fixed;
+            width: 4px; height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+            animation: sparkleAnim 1.5s ease-in-out infinite;
+        }
+        @keyframes sparkleAnim {
+            0%,100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Кнопка назад */
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 18px 45px;
+            background: linear-gradient(90deg, #ff0088, #8800ff, #0088ff);
+            background-size: 300% 100%;
+            border: none; border-radius: 50px;
+            color: #fff; font-family: inherit; font-size: 1.1rem;
+            font-weight: bold; letter-spacing: 2px;
+            text-decoration: none; cursor: pointer;
+            animation: btnRainbow 2s linear infinite, btnPulse 1s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(255,0,136,0.5), 0 0 40px rgba(136,0,255,0.3);
+            transition: all 0.3s ease;
+            position: relative; overflow: hidden;
+        }
+        .back-btn:hover {
+            transform: scale(1.1) rotate(-2deg);
+            box-shadow: 0 0 40px rgba(255,0,136,0.8), 0 0 80px rgba(136,0,255,0.5), 0 0 120px rgba(0,136,255,0.3);
+        }
+        @keyframes btnRainbow { 0%{background-position:0% 50%} 100%{background-position:300% 50%} }
+        @keyframes btnPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+
+        /* Бегущая строка */
+        .marquee {
+            position: fixed; bottom: 0; left: 0;
+            width: 100%; background: rgba(0,0,0,0.7);
+            padding: 12px 0; overflow: hidden;
+            z-index: 10; border-top: 2px solid #ff0088;
+        }
+        .marquee-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marqueeScroll 15s linear infinite;
+            color: #fff; font-size: 1rem; letter-spacing: 3px;
+        }
+        @keyframes marqueeScroll { 0%{transform:translateX(100vw)} 100%{transform:translateX(-100%)} }
+
+        /* Всплывающие эмодзи при клике */
+        .click-emoji {
+            position: fixed;
+            font-size: 2.5rem;
+            pointer-events: none;
+            z-index: 100;
+            animation: clickPop 1s ease-out forwards;
+        }
+        @keyframes clickPop {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5) rotate(0deg); }
+            100% { opacity: 0; transform: translate(-50%, calc(-50% - 100px)) scale(1.5) rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .content { padding: 40px 15px; }
+            .card { padding: 25px 20px; }
+            .back-btn { padding: 15px 35px; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="rainbow-bg"></div>
+    <canvas id="confetti"></canvas>
+    <div class="emoji-rain" id="emojiRain"></div>
+
+    <div class="content">
+        <h1>🌈 АХУЕННЫЙ ПИЗДЕЦ 🌈</h1>
+        <div class="subtitle">✨ Добро пожаловать в радужное безумие ✨</div>
+
+        <div class="cards">
+            <div class="card">
+                <div class="card-title">🎉 ТУТ ВСЁ ШИКАРНО</div>
+                <p>Эта страница создана для тех, кто устал от серости и хочет увидеть настоящий праздник красок! Здесь всё мерцает, прыгает и танцует!</p>
+            </div>
+            <div class="card">
+                <div class="card-title">🦄 РАДУЖНАЯ МАГИЯ</div>
+                <p>Каждый элемент на этой странице живёт своей жизнью. Карточки виляют, текст переливается всеми цветами радуги, а конфетти падают бесконечно!</p>
+            </div>
+            <div class="card">
+                <div class="card-title">⚡ СДВГ МОД АКТИВИРОВАН</div>
+                <p>Невозможно усидеть на месте! Всё движется, мигает и привлекает внимание. Это самая хаотичная и весёлая страница во всём интернете!</p>
+            </div>
+            <div class="card">
+                <div class="card-title">🎊 КЛИКАЙ ВЕЗДЕ</div>
+                <p>Попробуй кликнуть в любом месте экрана — тебя ждёт сюрприз! Каждый клик создаёт взрыв эмодзи и радости!</p>
+            </div>
+        </div>
+
+        <a href="index.html" class="back-btn">← Вернуться к памяти</a>
+    </div>
+
+    <div class="marquee">
+        <div class="marquee-content">
+            🌈 РАДУГА РАДУГА РАДУГА 🦄 ЕДИНОРОГИ ЛЮБЯТ ТЕБЯ ✨ МЕРЦАНИЕ МЕРЦАНИЕ МЕРЦАНИЕ 🎉 ВЕСЕЛИСЬ НЕ ГРУСТИ 🌈 ЖИЗНЬ ПРЕКРАСНА 🦄 ТАНЦУЙ КАК НИКТО НЕ ВИДИТ ✨
+        </div>
+    </div>
+
+    <script>
+        // Конфетти
+        const canvas = document.getElementById('confetti');
+        const ctx = canvas.getContext('2d');
+        let w, h;
+        const confettiPieces = [];
+        const colors = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#8800ff','#ff0088','#ff4444','#44ff44','#4444ff'];
+
+        function resize() { w = canvas.width = innerWidth; h = canvas.height = innerHeight; }
+        resize(); addEventListener('resize', resize);
+
+        class Confetti {
+            constructor() { this.reset(true); }
+            reset(init) {
+                this.x = Math.random() * w;
+                this.y = init ? Math.random() * h : -20;
+                this.w = Math.random() * 10 + 5;
+                this.h = Math.random() * 6 + 3;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.vy = Math.random() * 3 + 2;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.rotation = Math.random() * 360;
+                this.rotSpeed = (Math.random() - 0.5) * 10;
+            }
+            update() {
+                this.y += this.vy;
+                this.x += this.vx;
+                this.rotation += this.rotSpeed;
+                if (this.y > h + 20) this.reset(false);
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate((this.rotation * Math.PI) / 180);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h);
+                ctx.restore();
+            }
+        }
+
+        for (let i = 0; i < 200; i++) confettiPieces.push(new Confetti());
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, w, h);
+            confettiPieces.forEach(c => { c.update(); c.draw(); });
+            requestAnimationFrame(animateConfetti);
+        }
+        animateConfetti();
+
+        // Эмодзи дождь
+        const emojis = ['🌈','🦄','✨','🎉','🎊','💖','⭐','🔥','💫','🎈','🌟','💃','🕺','🎸','🎺'];
+        const rainContainer = document.getElementById('emojiRain');
+
+        function createEmoji() {
+            const el = document.createElement('div');
+            el.className = 'emoji';
+            el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            el.style.left = Math.random() * 100 + '%';
+            el.style.animationDuration = (Math.random() * 5 + 4) + 's';
+            el.style.animationDelay = Math.random() * 2 + 's';
+            el.style.fontSize = (Math.random() * 1.5 + 1.5) + 'rem';
+            rainContainer.appendChild(el);
+            setTimeout(() => el.remove(), 12000);
+        }
+
+        setInterval(createEmoji, 400);
+        for (let i = 0; i < 15; i++) setTimeout(createEmoji, i * 200);
+
+        // Мерцающие звёзды
+        function createSparkle() {
+            const el = document.createElement('div');
+            el.className = 'sparkle';
+            el.style.left = Math.random() * 100 + '%';
+            el.style.top = Math.random() * 100 + '%';
+            el.style.animationDelay = Math.random() * 2 + 's';
+            el.style.background = colors[Math.floor(Math.random() * colors.length)];
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 5000);
+        }
+        setInterval(createSparkle, 300);
+        for (let i = 0; i < 30; i++) setTimeout(createSparkle, i * 100);
+
+        // Клик-эмодзи
+        const clickEmojis = ['💥','✨','🌟','💫','⭐','🎉','🎊','💖','🔥','🌈'];
+        document.addEventListener('click', (e) => {
+            for (let i = 0; i < 5; i++) {
+                const el = document.createElement('div');
+                el.className = 'click-emoji';
+                el.textContent = clickEmojis[Math.floor(Math.random() * clickEmojis.length)];
+                el.style.left = (e.clientX + (Math.random() - 0.5) * 60) + 'px';
+                el.style.top = (e.clientY + (Math.random() - 0.5) * 60) + 'px';
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 1000);
+            }
+        });
+
+        // Дополнительное безумие: случайное изменение цвета фона карточек
+        const cards = document.querySelectorAll('.card');
+        setInterval(() => {
+            cards.forEach(card => {
+                if (Math.random() > 0.7) {
+                    card.style.borderColor = colors[Math.floor(Math.random() * colors.length)];
+                }
+            });
+        }, 2000);
+    </script>
+</body>
+</html>
