@@ -2,361 +2,215 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Тёмный Коридор</title>
+<title>Тёмный Коридор — 3D</title>
 <style>
+    /* === Базовые сбросы и оформление === */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         background: #000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
         overflow: hidden;
         font-family: 'Courier New', monospace;
+        color: #e0e0e0;
+        cursor: none;
     }
-    #game {
-        background: #000;
-        display: block;
-        image-rendering: pixelated;
-        image-rendering: -moz-crisp-edges;
-        image-rendering: crisp-edges;
-        width: 100vw;
-        height: 100vh;
-        max-width: 1000px;
-        max-height: 750px;
+    canvas { display: block; }
+    
+    /* === Перекрестие прицела === */
+    #crosshair {
+        position: fixed;
+        top: 50%; left: 50%;
+        width: 4px; height: 4px;
+        background: rgba(255,255,255,0.7);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 100;
     }
+    #crosshair::before, #crosshair::after {
+        content: '';
+        position: absolute;
+        background: rgba(255,255,255,0.7);
+    }
+    #crosshair::before { width: 14px; height: 1px; top: 1px; left: -5px; }
+    #crosshair::after { width: 1px; height: 14px; top: -5px; left: 1px; }
+
+    /* === Окно диалога === */
     #dialog {
         position: fixed;
         bottom: 40px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.92);
-        color: #e0e0e0;
-        padding: 20px 30px;
-        border: 2px solid #555;
-        font-size: 18px;
-        max-width: 700px;
+        background: rgba(0, 0, 0, 0.85);
+        padding: 18px 28px;
+        border: 2px solid #666;
+        font-size: 16px;
+        max-width: 720px;
         display: none;
-        z-index: 100;
+        z-index: 150;
         line-height: 1.5;
         letter-spacing: 0.5px;
+        text-align: center;
     }
+
+    /* === Подсказки === */
     #hint {
         position: fixed;
         top: 30px;
         left: 50%;
         transform: translateX(-50%);
-        color: #888;
-        font-size: 14px;
+        color: #aaa;
+        font-size: 13px;
         letter-spacing: 1px;
-        z-index: 100;
+        z-index: 150;
         text-align: center;
+        background: rgba(0,0,0,0.5);
+        padding: 8px 16px;
+        border: 1px solid #444;
     }
+    #interactionHint {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, 80px);
+        color: #fff;
+        font-size: 14px;
+        background: rgba(0,0,0,0.7);
+        padding: 6px 14px;
+        border: 1px solid #888;
+        z-index: 140;
+        display: none;
+    }
+
+    /* === Экран захвата курсора === */
+    #lockScreen {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 200;
+        cursor: pointer;
+    }
+    #lockScreen h1 {
+        font-size: 42px;
+        margin-bottom: 20px;
+        color: #b8860b;
+        letter-spacing: 3px;
+    }
+    #lockScreen p {
+        font-size: 16px;
+        color: #888;
+        margin: 8px 0;
+    }
+
+    /* === Финальный экран === */
+    #endScreen {
+        position: fixed;
+        inset: 0;
+        background: #b8860b;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 250;
+        color: #2a1a0a;
+        font-family: 'Courier New', monospace;
+        font-size: 22px;
+        text-align: center;
+        line-height: 1.8;
+        padding: 40px;
+    }
+    #endScreen .icon { font-size: 72px; margin-bottom: 30px; }
+    #endScreen .sub { margin-top: 40px; font-size: 14px; opacity: 0.6; }
+
     @keyframes flicker {
         0%, 100% { opacity: 1; }
-        20% { opacity: 0.3; }
-        40% { opacity: 0.8; }
-        60% { opacity: 0.2; }
-        80% { opacity: 0.9; }
+        25% { opacity: 0.3; }
+        50% { opacity: 0.85; }
+        75% { opacity: 0.2; }
     }
-    .flicker { animation: flicker 0.15s infinite; }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
+    .flicker { animation: flicker 0.2s infinite; }
 </style>
 </head>
 <body>
 
-<div id="hint">WASD — движение | F — фонарик | E — взаимодействие</div>
+<!-- Экран запуска -->
+<div id="lockScreen">
+    <h1>ТЁМНЫЙ КОРИДОР</h1>
+    <p>WASD — движение &nbsp;|&nbsp; МЫШЬ — обзор</p>
+    <p>F — фонарик &nbsp;|&nbsp; E — взаимодействие</p>
+    <p style="margin-top: 40px; color: #555;">[Нажмите, чтобы начать]</p>
+</div>
 
-<svg id="game" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
-    <defs>
-        <pattern id="wallTex" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-            <rect width="16" height="16" fill="#1a1410"/>
-            <rect x="0" y="0" width="8" height="8" fill="#201812"/>
-            <rect x="8" y="8" width="8" height="8" fill="#161008"/>
-            <rect x="2" y="10" width="4" height="2" fill="#0f0a05"/>
-            <rect x="10" y="2" width="4" height="2" fill="#0f0a05"/>
-        </pattern>
-        
-        <pattern id="floorTex" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
-            <rect width="32" height="32" fill="#1c1c1c"/>
-            <rect x="0" y="0" width="16" height="16" fill="#222222"/>
-            <rect x="16" y="16" width="16" height="16" fill="#222222"/>
-            <rect x="2" y="4" width="2" height="2" fill="#2a2a2a"/>
-            <rect x="20" y="22" width="2" height="2" fill="#2a2a2a"/>
-        </pattern>
-        
-        <pattern id="yellowFloor" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-            <rect width="48" height="48" fill="#b8860b"/>
-            <rect x="0" y="0" width="24" height="24" fill="#c89419"/>
-            <rect x="24" y="24" width="24" height="24" fill="#c89419"/>
-            <rect x="46" y="0" width="2" height="48" fill="#8b6508"/>
-            <rect x="0" y="46" width="48" height="2" fill="#8b6508"/>
-        </pattern>
-        
-        <mask id="darkMask">
-            <rect x="-1000" y="-1000" width="4000" height="4000" fill="black"/>
-            <circle id="maskLight" cx="400" cy="300" r="80" fill="white"/>
-        </mask>
-    </defs>
-    
-    <!-- Игровой мир в мировых координатах -->
-    <g id="world">
-        <!-- Сцена коридора -->
-        <g id="corridorScene">
-            <!-- Пол коридора -->
-            <rect x="200" y="0" width="400" height="1900" fill="url(#floorTex)"/>
-            
-            <!-- Левая стена -->
-            <rect x="0" y="0" width="200" height="1900" fill="url(#wallTex)"/>
-            <rect x="195" y="0" width="5" height="1900" fill="#0a0604"/>
-            
-            <!-- Правая стена -->
-            <rect x="600" y="0" width="200" height="1900" fill="url(#wallTex)"/>
-            <rect x="600" y="0" width="5" height="1900" fill="#0a0604"/>
-            
-            <!-- Декор коридора: трещины -->
-            <g fill="#0a0604">
-                <rect x="150" y="300" width="2" height="20"/>
-                <rect x="152" y="310" width="2" height="15"/>
-                <rect x="148" y="315" width="2" height="10"/>
-                
-                <rect x="650" y="500" width="2" height="25"/>
-                <rect x="648" y="515" width="2" height="15"/>
-                
-                <rect x="160" y="800" width="2" height="18"/>
-                <rect x="162" y="812" width="2" height="12"/>
-                
-                <rect x="640" y="1100" width="2" height="30"/>
-                <rect x="638" y="1118" width="2" height="14"/>
-            </g>
-            
-            <!-- Пятна на полу -->
-            <g fill="#151515">
-                <rect x="280" y="400" width="24" height="16"/>
-                <rect x="290" y="410" width="16" height="8"/>
-                
-                <rect x="480" y="700" width="32" height="20"/>
-                <rect x="490" y="715" width="16" height="10"/>
-                
-                <rect x="240" y="1200" width="28" height="18"/>
-                <rect x="520" y="1400" width="20" height="14"/>
-            </g>
-            
-            <!-- Дверь в конце коридора -->
-            <g id="door">
-                <rect x="340" y="1780" width="120" height="180" fill="#3a2515"/>
-                <rect x="340" y="1780" width="120" height="8" fill="#2a1a0a"/>
-                <rect x="340" y="1780" width="8" height="180" fill="#2a1a0a"/>
-                <rect x="452" y="1780" width="8" height="180" fill="#2a1a0a"/>
-                
-                <!-- Панели двери -->
-                <rect x="360" y="1810" width="80" height="60" fill="#2a1a0a" stroke="#1a1005" stroke-width="2"/>
-                <rect x="360" y="1890" width="80" height="60" fill="#2a1a0a" stroke="#1a1005" stroke-width="2"/>
-                
-                <!-- Ручка -->
-                <rect x="430" y="1870" width="12" height="4" fill="#ffcc00"/>
-                <rect x="438" y="1866" width="4" height="12" fill="#ffcc00"/>
-            </g>
-            
-            <!-- Подсказка у двери -->
-            <g id="doorHint" style="display:none">
-                <rect x="330" y="1760" width="140" height="20" fill="rgba(0,0,0,0.8)" stroke="#666" stroke-width="1"/>
-                <text x="400" y="1775" text-anchor="middle" fill="#ccc" font-size="12" font-family="Courier New">НАЖМИ [E]</text>
-            </g>
-        </g>
-        
-        <!-- Сцена жёлтой комнаты -->
-        <g id="roomScene" style="display:none">
-            <!-- Пол -->
-            <rect x="0" y="0" width="1600" height="1200" fill="url(#yellowFloor)"/>
-            
-            <!-- Стены -->
-            <rect x="0" y="0" width="1600" height="120" fill="#d4a017" stroke="#8b6508" stroke-width="3"/>
-            <rect x="0" y="0" width="120" height="1200" fill="#d4a017" stroke="#8b6508" stroke-width="3"/>
-            <rect x="1480" y="0" width="120" height="1200" fill="#d4a017" stroke="#8b6508" stroke-width="3"/>
-            
-            <!-- Плинтус -->
-            <rect x="120" y="115" width="1360" height="5" fill="#8b6508"/>
-            <rect x="115" y="120" width="5" height="1080" fill="#8b6508"/>
-            <rect x="1480" y="120" width="5" height="1080" fill="#8b6508"/>
-            
-            <!-- Картина на стене -->
-            <g transform="translate(400, 140)">
-                <rect x="-60" y="0" width="120" height="80" fill="#2a1a0a" stroke="#1a0a00" stroke-width="4"/>
-                <rect x="-56" y="4" width="112" height="72" fill="#4a3020"/>
-                <rect x="-40" y="20" width="80" height="40" fill="#6a4030"/>
-                <rect x="-20" y="30" width="40" height="20" fill="#8a5040"/>
-            </g>
-            
-            <!-- Лампа на потолке (вид сверху - круг) -->
-            <g transform="translate(800, 600)">
-                <circle cx="0" cy="0" r="40" fill="#3a3a3a" opacity="0.6"/>
-                <circle cx="0" cy="0" r="25" fill="#6a6a5a" opacity="0.7"/>
-                <circle cx="0" cy="0" r="12" fill="#a0a080"/>
-            </g>
-            
-            <!-- Стул (вид сверху) -->
-            <g id="chair" transform="translate(800, 550)">
-                <!-- Ножки -->
-                <rect x="-45" y="-45" width="8" height="8" fill="#3a2510"/>
-                <rect x="37" y="-45" width="8" height="8" fill="#3a2510"/>
-                <rect x="-45" y="37" width="8" height="8" fill="#3a2510"/>
-                <rect x="37" y="37" width="8" height="8" fill="#3a2510"/>
-                <!-- Сиденье -->
-                <rect x="-40" y="-40" width="80" height="80" fill="#6b4423" stroke="#3a2510" stroke-width="3"/>
-                <rect x="-36" y="-36" width="72" height="72" fill="#7a5230"/>
-                <!-- Спинка -->
-                <rect x="-40" y="-55" width="80" height="15" fill="#5a3518" stroke="#3a2510" stroke-width="2"/>
-            </g>
-            
-            <!-- Ванякек на стуле -->
-            <g id="vanyak" transform="translate(800, 550)">
-                <!-- Тело (вид сверху, в чёрной одежде) -->
-                <rect x="-30" y="-25" width="60" height="50" fill="#0a0a0a"/>
-                <rect x="-28" y="-23" width="56" height="46" fill="#1a1a1a"/>
-                
-                <!-- Руки свисают -->
-                <rect x="-38" y="-15" width="10" height="30" fill="#1a1a1a"/>
-                <rect x="28" y="-15" width="10" height="30" fill="#1a1a1a"/>
-                
-                <!-- Ладони -->
-                <rect x="-37" y="12" width="8" height="8" fill="#5a5a6a"/>
-                <rect x="29" y="12" width="8" height="8" fill="#5a5a6a"/>
-                
-                <!-- Голова (опущена вперёд) -->
-                <g id="vanyakHead">
-                    <rect x="-18" y="-38" width="36" height="32" fill="#1a1a1a"/> <!-- Волосы -->
-                    <rect x="-15" y="-35" width="30" height="28" fill="#6a6a7a"/> <!-- Лицо (серое, мёртвое) -->
-                    
-                    <!-- Глаза - X (мёртвые) -->
-                    <g id="vanyakEyes">
-                        <!-- Левый глаз -->
-                        <rect x="-10" y="-25" width="3" height="3" fill="#1a1a1a"/>
-                        <rect x="-7" y="-22" width="3" height="3" fill="#1a1a1a"/>
-                        <rect x="-7" y="-25" width="3" height="3" fill="#1a1a1a" opacity="0.5"/>
-                        <rect x="-10" y="-22" width="3" height="3" fill="#1a1a1a" opacity="0.5"/>
-                        
-                        <!-- Правый глаз -->
-                        <rect x="4" y="-25" width="3" height="3" fill="#1a1a1a"/>
-                        <rect x="7" y="-22" width="3" height="3" fill="#1a1a1a"/>
-                        <rect x="7" y="-25" width="3" height="3" fill="#1a1a1a" opacity="0.5"/>
-                        <rect x="4" y="-22" width="3" height="3" fill="#1a1a1a" opacity="0.5"/>
-                    </g>
-                    
-                    <!-- Рот -->
-                    <rect x="-5" y="-14" width="10" height="2" fill="#2a1a1a"/>
-                </g>
-                
-                <!-- Ноги -->
-                <rect x="-22" y="25" width="18" height="20" fill="#0a0a0a"/>
-                <rect x="4" y="25" width="18" height="20" fill="#0a0a0a"/>
-                
-                <!-- Ботинки -->
-                <rect x="-24" y="42" width="22" height="8" fill="#000"/>
-                <rect x="2" y="42" width="22" height="8" fill="#000"/>
-            </g>
-            
-            <!-- Подсказка у ванякека -->
-            <g id="vanyakHint" style="display:none">
-                <rect x="720" y="460" width="160" height="24" fill="rgba(0,0,0,0.8)" stroke="#666" stroke-width="1"/>
-                <text x="800" y="477" text-anchor="middle" fill="#ccc" font-size="13" font-family="Courier New">ПОГОВОРИТЬ [E]</text>
-            </g>
-        </g>
-        
-        <!-- Игрок -->
-        <g id="player">
-            <!-- Тень -->
-            <ellipse cx="0" cy="20" rx="18" ry="6" fill="rgba(0,0,0,0.5)"/>
-            
-            <!-- Ноги -->
-            <rect x="-10" y="12" width="8" height="12" fill="#1a1a3a"/>
-            <rect x="2" y="12" width="8" height="12" fill="#1a1a3a"/>
-            
-            <!-- Тело -->
-            <rect x="-12" y="-8" width="24" height="22" fill="#4a6090"/>
-            <rect x="-10" y="-6" width="20" height="18" fill="#5a70a0"/>
-            
-            <!-- Руки -->
-            <rect x="-16" y="-6" width="6" height="16" fill="#4a6090"/>
-            <rect x="10" y="-6" width="6" height="16" fill="#4a6090"/>
-            
-            <!-- Голова -->
-            <rect x="-8" y="-22" width="16" height="16" fill="#d4a580"/>
-            <rect x="-6" y="-20" width="12" height="12" fill="#e0b890"/>
-            
-            <!-- Волосы -->
-            <rect x="-9" y="-24" width="18" height="6" fill="#3a2510"/>
-            <rect x="-10" y="-22" width="2" height="4" fill="#3a2510"/>
-            <rect x="8" y="-22" width="2" height="4" fill="#3a2510"/>
-            
-            <!-- Глаза -->
-            <rect x="-4" y="-16" width="2" height="2" fill="#000"/>
-            <rect x="2" y="-16" width="2" height="2" fill="#000"/>
-            
-            <!-- Фонарик в руке (когда включён) -->
-            <g id="flashlightItem" style="display:none">
-                <rect x="10" y="4" width="14" height="6" fill="#333"/>
-                <rect x="22" y="3" width="4" height="8" fill="#ffeb99"/>
-            </g>
-        </g>
-    </g>
-    
-    <!-- Тьма с маской фонарика (в экранных координатах) -->
-    <rect id="darkness" x="0" y="0" width="800" height="600" fill="black" opacity="0.97" mask="url(#darkMask)"/>
-</svg>
-
+<!-- Игровые элементы HUD -->
+<div id="crosshair"></div>
+<div id="hint">WASD — движение | МЫШЬ — обзор | F — фонарик | E — взаимодействие</div>
+<div id="interactionHint"></div>
 <div id="dialog"></div>
 
-<script>
-const svg = document.getElementById('game');
-const world = document.getElementById('world');
-const player = document.getElementById('player');
-const maskLight = document.getElementById('maskLight');
-const dialog = document.getElementById('dialog');
-const doorHint = document.getElementById('doorHint');
-const vanyakHint = document.getElementById('vanyakHint');
-const corridorScene = document.getElementById('corridorScene');
-const roomScene = document.getElementById('roomScene');
-const door = document.getElementById('door');
-const flashlightItem = document.getElementById('flashlightItem');
-const vanyakEyes = document.getElementById('vanyakEyes');
-const vanyakHead = document.getElementById('vanyakHead');
+<!-- Финальный экран -->
+<div id="endScreen">
+    <div class="icon">☠</div>
+    <div>Ты сел на второй стул.</div>
+    <div>Рядом с ванякеком.</div>
+    <div class="sub">Жёлтая комната теперь твоя. Навсегда.</div>
+    <div style="margin-top: 60px; font-size: 12px; opacity: 0.4;">[F5, чтобы попробовать снова]</div>
+</div>
 
-// Состояние игры
-let state = {
-    x: 400,
-    y: 300,
-    flashlight: false,
-    location: 'corridor', // 'corridor' или 'room'
-    doorOpen: false,
+<!-- Three.js через CDN -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
+
+<script>
+/* =========================================================================
+   ТЁМНЫЙ КОРИДОР — 3D версия в воксельном стиле Minecraft
+   Архитектура:
+   - Scene/Renderer/Camera — базовый рендеринг
+   - PointerLockControls — управление от первого лица
+   - TextureFactory — программная генерация воксельных текстур (canvas)
+   - WorldBuilder — построение коридора и комнаты
+   - GameLogic — состояние, диалоги, взаимодействия
+   ========================================================================= */
+
+// === Глобальное состояние игры ===
+const Game = {
+    scene: null,
+    renderer: null,
+    camera: null,
+    controls: null,
+    clock: new THREE.Clock(),
+    
+    // Состояние игрока
+    player: {
+        position: new THREE.Vector3(0, 1.7, 18), // высота глаз
+        velocity: new THREE.Vector3(),
+        speed: 4.0,
+        onGround: true
+    },
+    
+    // Флаги состояния
+    flashlightOn: false,
+    location: 'corridor', // 'corridor' | 'room'
+    doorOpened: false,
     dialogActive: false,
     dialogStep: 0,
-    vanyakAlive: false, // для анимации
-    keys: {}
+    gameEnded: false,
+    
+    // Системы
+    keys: {},
+    flashlight: null,
+    raycaster: new THREE.Raycaster(),
+    interactables: [], // объекты, с которыми можно взаимодействовать
+    
+    // Позиции ключевых объектов
+    DOOR_POS: new THREE.Vector3(0, 1.5, -48),
+    VANYAKEK_POS: new THREE.Vector3(0, 0.8, -3),
+    ROOM_CENTER: new THREE.Vector3(0, 1.7, 0)
 };
 
-const SPEED = 1.8;
-const VP_W = 800;
-const VP_H = 600;
-
-// Границы мира
-const CORRIDOR = {
-    minX: 220, maxX: 580,
-    minY: 150, maxY: 1880,
-    doorY: 1760,
-    length: 1900
-};
-
-const ROOM = {
-    minX: 150, maxX: 1450,
-    minY: 150, maxY: 1050
-};
-
-// Диалоги ванякека
-const dialogues = [
+// === Диалоги ванякека (сохранены оригинал) ===
+const DIALOGUES = [
     { text: "*тишина... только слабое потрескивание лампы*", delay: 2500 },
     { text: "Ты... кто? Ваня? Это ты?", delay: 2500 },
     { text: "*голова ванякека медленно поднимается*", delay: 2000, action: 'lift_head' },
@@ -371,239 +225,1021 @@ const dialogues = [
     { text: "...правда?", delay: 2500 }
 ];
 
-// Ввод
-document.addEventListener('keydown', (e) => {
-    const k = e.key.toLowerCase();
-    state.keys[k] = true;
-    
-    if (k === 'f' && state.location === 'corridor') {
-        state.flashlight = !state.flashlight;
-        flashlightItem.style.display = state.flashlight ? 'block' : 'none';
-        updateFlashlight();
+/* =========================================================================
+   TEXTURE FACTORY
+   Генерируем воксельные текстуры программно через canvas.
+   Это даёт чёткие пиксельные блоки в стиле Minecraft без внешних файлов.
+   ========================================================================= */
+const TextureFactory = (() => {
+    /**
+     * Создаёт текстуру 16x16 пикселей с заданной цветовой схемой и деталями.
+     * @param {Object} spec — спецификация текстуры
+     */
+    function createPixelTexture(spec) {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 16;
+        const ctx = canvas.getContext('2d');
+        
+        // Базовый цвет
+        ctx.fillStyle = spec.base;
+        ctx.fillRect(0, 0, 16, 16);
+        
+        // Варианты (шумовые пиксели)
+        if (spec.variants) {
+            spec.variants.forEach(v => {
+                ctx.fillStyle = v.color;
+                v.pixels.forEach(([x, y, w, h]) => ctx.fillRect(x, y, w || 1, h || 1));
+            });
+        }
+        
+        // Границы
+        if (spec.border) {
+            ctx.fillStyle = spec.border;
+            ctx.fillRect(0, 0, 16, 1);
+            ctx.fillRect(0, 15, 16, 1);
+            ctx.fillRect(0, 0, 1, 16);
+            ctx.fillRect(15, 0, 1, 16);
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
     }
     
-    if (k === 'e') handleInteraction();
-});
-
-document.addEventListener('keyup', (e) => {
-    state.keys[e.key.toLowerCase()] = false;
-});
-
-function handleInteraction() {
-    if (state.dialogActive) return;
+    // === Спецификации текстур ===
+    const TEXTURES = {
+        // Тёмный камень стены коридора
+        wallDark: () => createPixelTexture({
+            base: '#1a1410',
+            variants: [
+                { color: '#201812', pixels: [[0,0,8,8],[8,8,8,8]] },
+                { color: '#161008', pixels: [[2,10,4,2],[10,2,4,2]] },
+                { color: '#0f0a05', pixels: [[4,4,2,2],[12,12,1,1]] }
+            ],
+            border: '#0a0604'
+        }),
+        
+        // Пол коридора — тёмный бетон
+        floorDark: () => createPixelTexture({
+            base: '#1c1c1c',
+            variants: [
+                { color: '#222222', pixels: [[0,0,8,8],[8,8,8,8]] },
+                { color: '#2a2a2a', pixels: [[3,5,1,1],[12,11,1,1],[7,3,1,1]] },
+                { color: '#141414', pixels: [[10,13,2,1],[2,14,1,1]] }
+            ],
+            border: '#0a0a0a'
+        }),
+        
+        // Жёлтый пол комнаты (как в backrooms)
+        floorYellow: () => createPixelTexture({
+            base: '#b8860b',
+            variants: [
+                { color: '#c89419', pixels: [[0,0,8,8],[8,8,8,8]] },
+                { color: '#8b6508', pixels: [[15,0,1,16],[0,15,16,1]] },
+                { color: '#d4a017', pixels: [[3,3,1,1],[10,11,1,1]] }
+            ],
+            border: '#8b6508'
+        }),
+        
+        // Жёлтые стены комнаты
+        wallYellow: () => createPixelTexture({
+            base: '#d4a017',
+            variants: [
+                { color: '#c89419', pixels: [[0,0,8,8],[8,8,8,8]] },
+                { color: '#8b6508', pixels: [[15,0,1,16],[0,15,16,1]] },
+                { color: '#b8860b', pixels: [[5,5,1,1],[12,3,1,1]] }
+            ],
+            border: '#8b6508'
+        }),
+        
+        // Дерево (дверь, стул, картина)
+        wood: () => createPixelTexture({
+            base: '#6b4423',
+            variants: [
+                { color: '#7a5230', pixels: [[0,0,16,8]] },
+                { color: '#5a3518', pixels: [[0,8,16,1],[0,15,16,1]] },
+                { color: '#3a2510', pixels: [[3,4,1,1],[10,11,1,1],[7,2,1,1]] }
+            ],
+            border: '#3a2510'
+        }),
+        
+        // Тёмное дерево (рама, ножки)
+        woodDark: () => createPixelTexture({
+            base: '#3a2510',
+            variants: [
+                { color: '#2a1a0a', pixels: [[0,0,16,2],[0,14,16,2]] },
+                { color: '#1a1005', pixels: [[5,5,1,1],[11,11,1,1]] }
+            ],
+            border: '#1a1005'
+        }),
+        
+        // Чёрная ткань (одежда ванякека)
+        blackCloth: () => createPixelTexture({
+            base: '#1a1a1a',
+            variants: [
+                { color: '#0a0a0a', pixels: [[0,0,8,8],[8,8,8,8]] },
+                { color: '#2a2a2a', pixels: [[4,4,1,1],[12,12,1,1]] }
+            ]
+        }),
+        
+        // Кожа (лицо ванякека, серо-мёртвое)
+        skinDead: () => createPixelTexture({
+            base: '#6a6a7a',
+            variants: [
+                { color: '#5a5a6a', pixels: [[0,0,16,8]] },
+                { color: '#7a7a8a', pixels: [[3,3,2,2]] },
+                { color: '#4a4a5a', pixels: [[10,10,1,1]] }
+            ]
+        }),
+        
+        // Волосы ванякека
+        hair: () => createPixelTexture({
+            base: '#1a1a1a',
+            variants: [
+                { color: '#0a0a0a', pixels: [[2,2,2,2],[8,6,2,2]] }
+            ]
+        }),
+        
+        // Картина (коричневые тона)
+        painting: () => createPixelTexture({
+            base: '#4a3020',
+            variants: [
+                { color: '#6a4030', pixels: [[2,4,12,8]] },
+                { color: '#8a5040', pixels: [[6,6,4,4]] },
+                { color: '#3a2010', pixels: [[0,0,16,2],[0,14,16,2],[0,0,2,16],[14,0,2,16]] }
+            ]
+        }),
+        
+        // Потолок (тёмно-серый)
+        ceiling: () => createPixelTexture({
+            base: '#2a2a2a',
+            variants: [
+                { color: '#1a1a1a', pixels: [[0,0,16,16]] },
+                { color: '#3a3a3a', pixels: [[4,4,8,8]] }
+            ]
+        }),
+        
+        // Жёлтый потолок
+        ceilingYellow: () => createPixelTexture({
+            base: '#d4a017',
+            variants: [
+                { color: '#c89419', pixels: [[0,0,16,16]] },
+                { color: '#8b6508', pixels: [[15,15,1,1]] }
+            ]
+        })
+    };
     
-    if (state.location === 'corridor') {
-        // Открыть дверь
-        if (state.y >= CORRIDOR.doorY - 40 && !state.doorOpen) {
-            state.doorOpen = true;
-            showDialog("*дверь со скрипом открывается...*");
-            
-            setTimeout(() => {
-                hideDialog();
-                enterRoom();
-            }, 2000);
+    // Кэшируем текстуры
+    const cache = {};
+    return {
+        get(name) {
+            if (!cache[name]) cache[name] = TEXTURES[name]();
+            return cache[name];
         }
-    } else if (state.location === 'room') {
-        // Подойти к ванякеку
-        const dx = Math.abs(state.x - 800);
-        const dy = Math.abs(state.y - 550);
-        if (dx < 80 && dy < 80) {
+    };
+})();
+
+/* =========================================================================
+   MATERIAL FACTORY
+   Воксельные материалы — все с NearestFilter для пиксельного вида.
+   ========================================================================= */
+const MaterialFactory = (() => {
+    function make(texName) {
+        return new THREE.MeshLambertMaterial({
+            map: TextureFactory.get(texName)
+        });
+    }
+    function makeMulti(texNames) {
+        // Для куба с разными гранями: +X, -X, +Y, -Y, +Z, -Z
+        return texNames.map(name => new THREE.MeshLambertMaterial({
+            map: TextureFactory.get(name)
+        }));
+    }
+    return { make, makeMulti };
+})();
+
+/* =========================================================================
+   WORLD BUILDER
+   Строим воксельный мир — коридор и комнату.
+   Все размеры в блоках (1 блок = 1 метр).
+   ========================================================================= */
+const WorldBuilder = (() => {
+    const BLOCK = 1;
+    
+    /**
+     * Создаёт блок (воксель) в указанной позиции.
+     */
+    function block(x, y, z, material, scale = BLOCK) {
+        const geo = new THREE.BoxGeometry(scale, scale, scale);
+        const mesh = new THREE.Mesh(geo, material);
+        mesh.position.set(x, y, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+    }
+    
+    /**
+     * Создаёт группу блоков (для эффективного построения стен).
+     */
+    function wallStrip(start, end, axis, material, yOffset = 0) {
+        const group = new THREE.Group();
+        const [sx, sy, sz] = start;
+        const [ex, ey, ez] = end;
+        
+        if (axis === 'x') {
+            for (let x = sx; x <= ex; x += BLOCK) {
+                for (let y = sy; y <= ey; y += BLOCK) {
+                    group.add(block(x, y + yOffset, sz, material));
+                }
+            }
+        } else if (axis === 'z') {
+            for (let z = sz; z <= ez; z += BLOCK) {
+                for (let y = sy; y <= ey; y += BLOCK) {
+                    group.add(block(sx, y + yOffset, z, material));
+                }
+            }
+        }
+        return group;
+    }
+    
+    /**
+     * Строит коридор.
+     * Размеры: 5 блоков шириной, 3 высотой, 50 длиной.
+     */
+    function buildCorridor(scene) {
+        const corridor = new THREE.Group();
+        const length = 50;
+        const width = 5;
+        const height = 3;
+        const halfW = Math.floor(width / 2);
+        
+        const wallMat = MaterialFactory.make('wallDark');
+        const floorMat = MaterialFactory.make('floorDark');
+        const ceilMat = MaterialFactory.make('ceiling');
+        
+        // Пол — полоса блоков
+        for (let z = 0; z > -length; z -= BLOCK) {
+            for (let x = -halfW; x <= halfW; x += BLOCK) {
+                corridor.add(block(x, 0, z, floorMat));
+            }
+        }
+        
+        // Потолок
+        for (let z = 0; z > -length; z -= BLOCK) {
+            for (let x = -halfW; x <= halfW; x += BLOCK) {
+                corridor.add(block(x, height + 1, z, ceilMat));
+            }
+        }
+        
+        // Левая стена
+        for (let z = 0; z >= -length; z -= BLOCK) {
+            for (let y = 1; y <= height; y += BLOCK) {
+                corridor.add(block(-halfW - 1, y, z, wallMat));
+            }
+        }
+        
+        // Правая стена
+        for (let z = 0; z >= -length; z -= BLOCK) {
+            for (let y = 1; y <= height; y += BLOCK) {
+                corridor.add(block(halfW + 1, y, z, wallMat));
+            }
+        }
+        
+        // Задняя стена (с дверным проёмом)
+        for (let x = -halfW; x <= halfW; x += BLOCK) {
+            for (let y = 1; y <= height; y += BLOCK) {
+                // Дверной проём: x от -1 до 1, y 1-3
+                if (Math.abs(x) <= 1 && y <= 3) continue;
+                corridor.add(block(x, y, -length, wallMat));
+            }
+        }
+        
+        // Передняя стена (за спиной игрока)
+        for (let x = -halfW; x <= halfW; x += BLOCK) {
+            for (let y = 1; y <= height; y += BLOCK) {
+                corridor.add(block(x, y, 1, wallMat));
+            }
+        }
+        
+        // Дверь — отдельный объект для взаимодействия
+        const door = buildDoor();
+        door.position.set(0, 1.5, -length + 0.5);
+        door.userData = { type: 'door' };
+        corridor.add(door);
+        Game.interactables.push(door);
+        
+        scene.add(corridor);
+        return corridor;
+    }
+    
+    /**
+     * Строит дверь из блоков дерева.
+     */
+    function buildDoor() {
+        const door = new THREE.Group();
+        const woodMat = MaterialFactory.make('wood');
+        
+        // Рама двери (тёмное дерево)
+        const darkWood = MaterialFactory.make('woodDark');
+        door.add(block(-1.2, 0, 0, darkWood, 0.2));
+        door.add(block(1.2, 0, 0, darkWood, 0.2));
+        door.add(block(0, 1.2, 0, darkWood, 0.2));
+        
+        // Само дверное полотно (сдвинуто, чтобы заполнить проём)
+        const panel = block(0, 0, 0, woodMat, 2.2);
+        panel.scale.y = 2.4;
+        door.add(panel);
+        
+        // Ручка
+        const handleMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
+        const handle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.15), handleMat);
+        handle.position.set(0.7, 0, 0.15);
+        door.add(handle);
+        
+        return door;
+    }
+    
+    /**
+     * Строит жёлтую комнату.
+     * Размеры: 15x15 блоков, высота 4.
+     */
+    function buildRoom(scene) {
+        const room = new THREE.Group();
+        const size = 15;
+        const height = 4;
+        const halfS = Math.floor(size / 2);
+        
+        const wallMat = MaterialFactory.make('wallYellow');
+        const floorMat = MaterialFactory.make('floorYellow');
+        const ceilMat = MaterialFactory.make('ceilingYellow');
+        
+        // Пол
+        for (let x = -halfS; x <= halfS; x += BLOCK) {
+            for (let z = -halfS; z <= halfS; z += BLOCK) {
+                room.add(block(x, 0, z, floorMat));
+            }
+        }
+        
+        // Потолок
+        for (let x = -halfS; x <= halfS; x += BLOCK) {
+            for (let z = -halfS; z <= halfS; z += BLOCK) {
+                room.add(block(x, height + 1, z, ceilMat));
+            }
+        }
+        
+        // Четыре стены
+        // Передняя (с проёмом)
+        for (let x = -halfS; x <= halfS; x += BLOCK) {
+            for (let y = 1; y <= height; y += BLOCK) {
+                if (Math.abs(x) <= 1 && y <= 3) continue;
+                room.add(block(x, y, -halfS - 1, wallMat));
+            }
+        }
+        // Задняя
+        for (let x = -halfS; x <= halfS; x += BLOCK) {
+            for (let y = 1; y <= height; y += BLOCK) {
+                room.add(block(x, y, halfS + 1, wallMat));
+            }
+        }
+        // Левая
+        for (let z = -halfS; z <= halfS; z += BLOCK) {
+            for (let y = 1; y <= height; y += BLOCK) {
+                room.add(block(-halfS - 1, y, z, wallMat));
+            }
+        }
+        // Правая
+        for (let z = -halfS; z <= halfS; z += BLOCK) {
+            for (let y = 1; y <= height; y += BLOCK) {
+                room.add(block(halfS + 1, y, z, wallMat));
+            }
+        }
+        
+        // Картина на стене
+        const painting = buildPainting();
+        painting.position.set(-3, 2.5, halfS + 0.1);
+        painting.rotation.y = Math.PI;
+        room.add(painting);
+        
+        // Лампа на потолке (блок с эмиссивом)
+        const lamp = buildLamp();
+        lamp.position.set(0, height, 0);
+        room.add(lamp);
+        
+        // Стул
+        const chair = buildChair();
+        chair.position.set(Game.VANYAKEK_POS.x, 0, Game.VANYAKEK_POS.z);
+        room.add(chair);
+        
+        // Ванякек (сидит на стуле)
+        const vanyak = buildVanyak();
+        vanyak.position.copy(Game.VANYAKEK_POS);
+        vanyak.userData = { type: 'vanyak' };
+        room.add(vanyak);
+        Game.interactables.push(vanyak);
+        Game.vanyak = vanyak;
+        
+        // Второй стул (на который можно "сесть" в концовке)
+        const chair2 = buildChair();
+        chair2.position.set(1.5, 0, Game.VANYAKEK_POS.z);
+        room.add(chair2);
+        
+        // Атмосферный свет для жёлтой комнаты (будет включён позже)
+        const roomLight = new THREE.PointLight(0xffaa33, 0, 15);
+        roomLight.position.set(0, height - 0.5, 0);
+        room.add(roomLight);
+        Game.roomLight = roomLight;
+        
+        // Ambient для комнаты
+        const ambientRoom = new THREE.AmbientLight(0xffaa33, 0);
+        room.add(ambientRoom);
+        Game.roomAmbient = ambientRoom;
+        
+        scene.add(room);
+        room.visible = false; // скрыта по умолчанию
+        return room;
+    }
+    
+    function buildPainting() {
+        const group = new THREE.Group();
+        const frameMat = MaterialFactory.make('woodDark');
+        const canvasMat = new THREE.MeshBasicMaterial({
+            map: TextureFactory.get('painting')
+        });
+        
+        // Рама
+        group.add(block(-1.05, 0, 0, frameMat, 0.1));
+        group.add(block(1.05, 0, 0, frameMat, 0.1));
+        group.add(block(0, 0.55, 0, frameMat, 0.1));
+        group.add(block(0, -0.55, 0, frameMat, 0.1));
+        
+        // Полотно
+        const canvas = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 1, 0.05),
+            canvasMat
+        );
+        group.add(canvas);
+        
+        return group;
+    }
+    
+    function buildLamp() {
+        const group = new THREE.Group();
+        // Корпус лампы
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 0.2, 0.6),
+            new THREE.MeshBasicMaterial({ color: 0xffee88 })
+        );
+        group.add(body);
+        // Шнур
+        const wire = new THREE.Mesh(
+            new THREE.BoxGeometry(0.05, 1, 0.05),
+            new THREE.MeshBasicMaterial({ color: 0x222222 })
+        );
+        wire.position.y = 0.6;
+        group.add(wire);
+        return group;
+    }
+    
+    function buildChair() {
+        const chair = new THREE.Group();
+        const woodMat = MaterialFactory.make('wood');
+        const darkMat = MaterialFactory.make('woodDark');
+        
+        // Ножки (4 шт)
+        const legPositions = [
+            [-0.4, 0.4, -0.4],
+            [0.4, 0.4, -0.4],
+            [-0.4, 0.4, 0.4],
+            [0.4, 0.4, 0.4]
+        ];
+        legPositions.forEach(([x, y, z]) => {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), darkMat);
+            leg.position.set(x, y, z);
+            chair.add(leg);
+        });
+        
+        // Сиденье
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1, 0.1, 1), woodMat);
+        seat.position.y = 0.85;
+        chair.add(seat);
+        
+        // Спинка
+        const back = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 0.1), woodMat);
+        back.position.set(0, 1.3, -0.45);
+        chair.add(back);
+        
+        return chair;
+    }
+    
+    function buildVanyak() {
+        const vanyak = new THREE.Group();
+        const clothMat = MaterialFactory.make('blackCloth');
+        const skinMat = MaterialFactory.make('skinDead');
+        const hairMat = MaterialFactory.make('hair');
+        
+        // Торс (сидя)
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.4), clothMat);
+        torso.position.y = 1.3;
+        vanyak.add(torso);
+        
+        // Руки (свисают)
+        const armL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.18), clothMat);
+        armL.position.set(-0.45, 1.0, 0);
+        vanyak.add(armL);
+        const armR = armL.clone();
+        armR.position.x = 0.45;
+        vanyak.add(armR);
+        
+        // Ладони
+        const palmMat = skinMat.clone();
+        const palmL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), palmMat);
+        palmL.position.set(-0.45, 0.6, 0);
+        vanyak.add(palmL);
+        const palmR = palmL.clone();
+        palmR.position.x = 0.45;
+        vanyak.add(palmR);
+        
+        // Ноги (согнуты, сидит)
+        const legMat = clothMat.clone();
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.4), legMat);
+        legL.position.set(-0.2, 0.7, 0.3);
+        vanyak.add(legL);
+        const legR = legL.clone();
+        legR.position.x = 0.2;
+        vanyak.add(legR);
+        
+        // Ботинки
+        const bootMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
+        const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.15, 0.35), bootMat);
+        bootL.position.set(-0.2, 0.3, 0.45);
+        vanyak.add(bootL);
+        const bootR = bootL.clone();
+        bootR.position.x = 0.2;
+        vanyak.add(bootR);
+        
+        // Голова — отдельная группа для анимации подъёма
+        const head = new THREE.Group();
+        head.position.y = 1.9;
+        head.rotation.x = 0.6; // наклонена вниз
+        
+        // Череп (лицо)
+        const skull = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.45), skinMat);
+        head.add(skull);
+        
+        // Волосы (сверху)
+        const hair = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.15, 0.47), hairMat);
+        hair.position.y = 0.25;
+        head.add(hair);
+        
+        // Глаза — X (мёртвые), из маленьких блоков
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
+        const eyeGroup = new THREE.Group();
+        eyeGroup.position.z = 0.24;
+        
+        // Левый X
+        const eL1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.02), eyeMat);
+        eL1.position.set(-0.1, 0.05, 0); eL1.rotation.z = Math.PI/4;
+        const eL2 = eL1.clone(); eL2.rotation.z = -Math.PI/4;
+        eyeGroup.add(eL1, eL2);
+        
+        // Правый X
+        const eR1 = eL1.clone(); eR1.position.x = 0.1;
+        const eR2 = eL2.clone(); eR2.position.x = 0.1;
+        eyeGroup.add(eR1, eR2);
+        
+        head.add(eyeGroup);
+        Game.vanyakEyes = eyeGroup;
+        
+        // Рот
+        const mouth = new THREE.Mesh(
+            new THREE.BoxGeometry(0.15, 0.03, 0.02),
+            new THREE.MeshBasicMaterial({ color: 0x2a1a1a })
+        );
+        mouth.position.set(0, -0.1, 0.24);
+        head.add(mouth);
+        
+        vanyak.add(head);
+        Game.vanyakHead = head;
+        
+        return vanyak;
+    }
+    
+    return { buildCorridor, buildRoom };
+})();
+
+/* =========================================================================
+   GAME LOGIC
+   Логика игры, диалогов, переходов между сценами.
+   ========================================================================= */
+const GameLogic = (() => {
+    function initScene() {
+        // Renderer
+        Game.renderer = new THREE.WebGLRenderer({ antialias: false });
+        Game.renderer.setSize(window.innerWidth, window.innerHeight);
+        Game.renderer.setPixelRatio(1); // пиксель-арт — без масштабирования
+        Game.renderer.setClearColor(0x000000, 1);
+        document.body.appendChild(Game.renderer.domElement);
+        
+        // Scene
+        Game.scene = new THREE.Scene();
+        // Глубокий туман для атмосферы — дальше 20 метров ничего не видно
+        Game.scene.fog = new THREE.Fog(0x000000, 0, 25);
+        
+        // Camera
+        Game.camera = new THREE.PerspectiveCamera(
+            75, window.innerWidth / window.innerHeight, 0.1, 100
+        );
+        Game.camera.position.copy(Game.player.position);
+        
+        // Ambient light (минимальный — в коридоре очень темно)
+        Game.ambientLight = new THREE.AmbientLight(0x404040, 0.08);
+        Game.scene.add(Game.ambientLight);
+        
+        // Фонарик — SpotLight, привязанный к камере
+        Game.flashlight = new THREE.SpotLight(0xffeecc, 0, 15, Math.PI / 5, 0.4, 1.5);
+        Game.flashlight.position.set(0, 0, 0);
+        Game.flashlight.target.position.set(0, 0, -1);
+        Game.camera.add(Game.flashlight);
+        Game.camera.add(Game.flashlight.target);
+        Game.scene.add(Game.camera);
+        
+        // Построение миров
+        Game.corridor = WorldBuilder.buildCorridor(Game.scene);
+        Game.room = WorldBuilder.buildRoom(Game.scene);
+        
+        // Controls
+        Game.controls = new THREE.PointerLockControls(Game.camera, document.body);
+        
+        // Обработчики
+        setupEventListeners();
+    }
+    
+    function setupEventListeners() {
+        // Запуск игры
+        document.getElementById('lockScreen').addEventListener('click', () => {
+            Game.controls.lock();
+        });
+        
+        Game.controls.addEventListener('lock', () => {
+            document.getElementById('lockScreen').style.display = 'none';
+        });
+        
+        Game.controls.addEventListener('unlock', () => {
+            if (!Game.gameEnded) {
+                document.getElementById('lockScreen').style.display = 'flex';
+            }
+        });
+        
+        // Клавиатура
+        document.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            Game.keys[k] = true;
+            
+            if (k === 'f') toggleFlashlight();
+            if (k === 'e') handleInteraction();
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            Game.keys[e.key.toLowerCase()] = false;
+        });
+        
+        // Ресайз окна
+        window.addEventListener('resize', () => {
+            Game.camera.aspect = window.innerWidth / window.innerHeight;
+            Game.camera.updateProjectionMatrix();
+            Game.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    }
+    
+    function toggleFlashlight() {
+        if (Game.location !== 'corridor') return;
+        Game.flashlightOn = !Game.flashlightOn;
+        Game.flashlight.intensity = Game.flashlightOn ? 2.5 : 0;
+    }
+    
+    /**
+     * Взаимодействие через raycaster — смотрим, на что игрок указывает.
+     */
+    function handleInteraction() {
+        if (Game.dialogActive || !Game.controls.isLocked) return;
+        
+        Game.raycaster.setFromCamera(new THREE.Vector2(0, 0), Game.camera);
+        Game.raycaster.far = 3.0;
+        
+        // Собираем все меши из интерактивных групп
+        const allMeshes = [];
+        Game.interactables.forEach(obj => {
+            obj.traverse(child => {
+                if (child.isMesh) allMeshes.push(child);
+            });
+        });
+        
+        const hits = Game.raycaster.intersectObjects(allMeshes, false);
+        if (hits.length === 0) return;
+        
+        // Находим родительскую интерактивную группу
+        let target = hits[0].object;
+        while (target && !target.userData.type) target = target.parent;
+        if (!target) return;
+        
+        if (target.userData.type === 'door' && !Game.doorOpened && Game.location === 'corridor') {
+            openDoor();
+        } else if (target.userData.type === 'vanyak' && Game.location === 'room') {
             startDialogue();
         }
     }
-}
-
-function enterRoom() {
-    state.location = 'room';
-    state.flashlight = false;
-    flashlightItem.style.display = 'none';
     
-    corridorScene.style.display = 'none';
-    roomScene.style.display = 'block';
-    
-    // Позиция игрока при входе в комнату
-    state.x = 800;
-    state.y = 1000;
-    
-    updateFlashlight();
-    
-    setTimeout(() => {
-        showDialog("*жёлтый свет. запах пыли и чего-то старого...*");
-        setTimeout(hideDialog, 3000);
-    }, 500);
-}
-
-function startDialogue() {
-    state.dialogActive = true;
-    state.dialogStep = 0;
-    showDialog(dialogues[0].text);
-    setTimeout(nextDialogue, dialogues[0].delay);
-}
-
-function nextDialogue() {
-    state.dialogStep++;
-    
-    if (state.dialogStep >= dialogues.length) {
-        endDialogue();
-        return;
-    }
-    
-    const line = dialogues[state.dialogStep];
-    showDialog(line.text);
-    
-    if (line.action === 'lift_head') {
-        vanyakHead.style.transition = 'transform 2s';
-        vanyakHead.setAttribute('transform', 'translate(0, -8)');
-    }
-    if (line.action === 'open_eyes') {
-        vanyakEyes.innerHTML = `
-            <rect x="-10" y="-26" width="6" height="4" fill="#fff"/>
-            <rect x="4" y="-26" width="6" height="4" fill="#fff"/>
-            <rect x="-8" y="-25" width="2" height="2" fill="#ff3030"/>
-            <rect x="6" y="-25" width="2" height="2" fill="#ff3030"/>
-        `;
-    }
-    
-    setTimeout(nextDialogue, line.delay);
-}
-
-function endDialogue() {
-    hideDialog();
-    state.dialogActive = false;
-    
-    setTimeout(() => {
-        svg.classList.add('flicker');
-        showDialog("*что-то холодное касается твоей руки...*");
+    function openDoor() {
+        Game.doorOpened = true;
+        showDialog("*дверь со скрипом открывается...*");
+        
+        // Анимация двери — поворот
+        const door = Game.interactables.find(o => o.userData.type === 'door');
+        if (door) {
+            const targetRot = Math.PI / 2;
+            const startRot = door.rotation.y;
+            const startTime = performance.now();
+            const duration = 800;
+            
+            (function animDoor() {
+                const t = Math.min(1, (performance.now() - startTime) / duration);
+                door.rotation.y = startRot + (targetRot - startRot) * t;
+                if (t < 1) requestAnimationFrame(animDoor);
+            })();
+        }
         
         setTimeout(() => {
-            svg.style.transition = 'opacity 3s';
-            svg.style.opacity = '0';
+            hideDialog();
+            enterRoom();
+        }, 2000);
+    }
+    
+    function enterRoom() {
+        Game.location = 'room';
+        Game.flashlightOn = false;
+        Game.flashlight.intensity = 0;
+        
+        // Телепорт игрока в комнату
+        Game.camera.position.set(0, 1.7, -6);
+        
+        // Прячем коридор, показываем комнату
+        Game.corridor.visible = false;
+        Game.room.visible = true;
+        
+        // Меняем туман — в комнате светло, виден весь интерьер
+        Game.scene.fog = new THREE.Fog(0x3a2800, 1, 30);
+        Game.scene.background = new THREE.Color(0x3a2800);
+        
+        // Включаем освещение комнаты
+        Game.roomLight.intensity = 1.8;
+        Game.roomAmbient.intensity = 0.6;
+        
+        // Убираем глобальный ambient (комната светится сама)
+        Game.ambientLight.intensity = 0.3;
+        
+        setTimeout(() => {
+            showDialog("*жёлтый свет. запах пыли и чего-то старого...*");
+            setTimeout(hideDialog, 3000);
+        }, 500);
+    }
+    
+    function startDialogue() {
+        Game.dialogActive = true;
+        Game.dialogStep = 0;
+        showDialog(DIALOGUES[0].text);
+        setTimeout(nextDialogue, DIALOGUES[0].delay);
+    }
+    
+    function nextDialogue() {
+        Game.dialogStep++;
+        if (Game.dialogStep >= DIALOGUES.length) {
+            endDialogue();
+            return;
+        }
+        
+        const line = DIALOGUES[Game.dialogStep];
+        showDialog(line.text);
+        
+        if (line.action === 'lift_head' && Game.vanyakHead) {
+            // Плавно поднимаем голову
+            const startRot = Game.vanyakHead.rotation.x;
+            const targetRot = 0.0;
+            const startTime = performance.now();
+            const duration = 1500;
+            (function animHead() {
+                const t = Math.min(1, (performance.now() - startTime) / duration);
+                Game.vanyakHead.rotation.x = startRot + (targetRot - startRot) * t;
+                if (t < 1) requestAnimationFrame(animHead);
+            })();
+        }
+        
+        if (line.action === 'open_eyes' && Game.vanyakEyes) {
+            // Заменяем X-глаза на белые с красными зрачками
+            Game.vanyakEyes.children.forEach(c => Game.vanyakEyes.remove(c));
+            const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const redMat = new THREE.MeshBasicMaterial({ color: 0xff2020 });
+            
+            // Левый глаз
+            const wL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, 0.02), whiteMat);
+            wL.position.set(-0.1, 0.05, 0);
+            const rL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), redMat);
+            rL.position.set(-0.1, 0.05, 0.01);
+            Game.vanyakEyes.add(wL, rL);
+            
+            // Правый глаз
+            const wR = wL.clone(); wR.position.x = 0.1;
+            const rR = rL.clone(); rR.position.x = 0.1;
+            Game.vanyakEyes.add(wR, rR);
+        }
+        
+        setTimeout(nextDialogue, line.delay);
+    }
+    
+    function endDialogue() {
+        hideDialog();
+        Game.dialogActive = false;
+        Game.gameEnded = true;
+        
+        setTimeout(() => {
+            // Мерцание экрана
+            document.body.classList.add('flicker');
+            showDialog("*что-то холодное касается твоей руки...*");
             
             setTimeout(() => {
-                document.body.style.background = '#b8860b';
-                document.body.innerHTML = `
-                    <div style="
-                        position: fixed;
-                        top: 50%; left: 50%;
-                        transform: translate(-50%, -50%);
-                        color: #2a1a0a;
-                        font-family: 'Courier New', monospace;
-                        font-size: 24px;
-                        text-align: center;
-                        line-height: 2;
-                        max-width: 600px;
-                        padding: 40px;
-                    ">
-                        <div style="font-size: 48px; margin-bottom: 30px;">☠</div>
-                        <div>Ты сел на второй стул.</div>
-                        <div>Рядом с ванякеком.</div>
-                        <div style="margin-top: 40px; font-size: 16px; opacity: 0.6;">
-                            Жёлтая комната теперь твоя.<br>
-                            Навсегда.
-                        </div>
-                        <div style="margin-top: 60px; font-size: 14px; opacity: 0.4;">
-                            [нажми F5, чтобы попробовать снова]
-                        </div>
-                    </div>
-                `;
-            }, 3500);
-        }, 2500);
-    }, 1500);
-}
-
-function showDialog(text) {
-    dialog.textContent = text;
-    dialog.style.display = 'block';
-}
-
-function hideDialog() {
-    dialog.style.display = 'none';
-}
-
-function updateFlashlight() {
-    if (state.location === 'corridor') {
-        const radius = state.flashlight ? 280 : 90;
-        maskLight.setAttribute('r', radius);
-        maskLight.setAttribute('fill', state.flashlight ? 'white' : 'white');
-        // Добавим мягкий градиент света для фонарика
-        if (state.flashlight) {
-            maskLight.setAttribute('fill', 'url(#lightGrad)');
-            // Но проще - просто круг побольше
-        }
-    } else {
-        // В комнате темно не нужно, но добавим лёгкое затемнение для атмосферы
-        maskLight.setAttribute('r', 350);
+                document.body.classList.remove('flicker');
+                // Fade out рендерера
+                Game.renderer.domElement.style.transition = 'opacity 3s';
+                Game.renderer.domElement.style.opacity = '0';
+                
+                setTimeout(() => {
+                    Game.renderer.domElement.style.display = 'none';
+                    document.getElementById('crosshair').style.display = 'none';
+                    document.getElementById('hint').style.display = 'none';
+                    document.getElementById('interactionHint').style.display = 'none';
+                    document.getElementById('dialog').style.display = 'none';
+                    document.getElementById('endScreen').style.display = 'flex';
+                }, 3500);
+            }, 2500);
+        }, 1500);
     }
-}
-
-function update() {
-    if (!state.dialogActive) {
-        let dx = 0, dy = 0;
-        if (state.keys['w'] || state.keys['arrowup']) dy = -SPEED;
-        if (state.keys['s'] || state.keys['arrowdown']) dy = SPEED;
-        if (state.keys['a'] || state.keys['arrowleft']) dx = -SPEED;
-        if (state.keys['d'] || state.keys['arrowright']) dx = SPEED;
+    
+    function showDialog(text) {
+        const d = document.getElementById('dialog');
+        d.textContent = text;
+        d.style.display = 'block';
+    }
+    
+    function hideDialog() {
+        document.getElementById('dialog').style.display = 'none';
+    }
+    
+    /**
+     * Главный игровой цикл.
+     */
+    function update() {
+        requestAnimationFrame(update);
+        const delta = Game.clock.getDelta();
         
-        // Нормализация диагонали
-        if (dx !== 0 && dy !== 0) {
-            dx *= 0.707;
-            dy *= 0.707;
+        if (!Game.controls.isLocked || Game.gameEnded) {
+            Game.renderer.render(Game.scene, Game.camera);
+            return;
         }
         
-        const newX = state.x + dx;
-        const newY = state.y + dy;
+        // === Движение игрока ===
+        if (!Game.dialogActive) {
+            const dir = new THREE.Vector3();
+            const right = new THREE.Vector3();
+            
+            // Направление камеры на плоскости XZ
+            Game.camera.getWorldDirection(dir);
+            dir.y = 0;
+            dir.normalize();
+            
+            right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+            
+            const moveVec = new THREE.Vector3();
+            if (Game.keys['w']) moveVec.add(dir);
+            if (Game.keys['s']) moveVec.sub(dir);
+            if (Game.keys['d']) moveVec.add(right);
+            if (Game.keys['a']) moveVec.sub(right);
+            
+            if (moveVec.lengthSq() > 0) {
+                moveVec.normalize().multiplyScalar(Game.player.speed * delta);
+                
+                // Простая проверка коллизий по границам локации
+                const newX = Game.camera.position.x + moveVec.x;
+                const newZ = Game.camera.position.z + moveVec.z;
+                
+                let canMove = true;
+                if (Game.location === 'corridor') {
+                    const halfW = 2.0;
+                    if (Math.abs(newX) > halfW) canMove = false;
+                    // Не выходим за длину коридора (но можно пройти в дверь, если она открыта)
+                    if (newZ > 0.5) canMove = false;
+                    if (newZ < -50.5 && !(Game.doorOpened && Math.abs(newX) < 1.0)) canMove = false;
+                } else {
+                    const halfS = 6.5;
+                    if (Math.abs(newX) > halfS) canMove = false;
+                    if (Math.abs(newZ) > halfS) canMove = false;
+                }
+                
+                if (canMove) {
+                    Game.camera.position.x = newX;
+                    Game.camera.position.z = newZ;
+                }
+            }
+        }
         
-        if (state.location === 'corridor') {
-            if (newX >= CORRIDOR.minX && newX <= CORRIDOR.maxX) state.x = newX;
-            if (newY >= CORRIDOR.minY && newY <= CORRIDOR.maxY) state.y = newY;
+        // === Head bob (покачивание головы при ходьбе) ===
+        if (!Game.dialogActive) {
+            const speed = Math.hypot(
+                Game.keys['w'] || Game.keys['s'] ? 1 : 0,
+                Game.keys['a'] || Game.keys['d'] ? 1 : 0
+            );
+            if (speed > 0) {
+                const bob = Math.sin(performance.now() * 0.008) * 0.03;
+                Game.camera.position.y = 1.7 + bob;
+            } else {
+                Game.camera.position.y = 1.7;
+            }
+        }
+        
+        // === Интерактивная подсказка ===
+        updateInteractionHint();
+        
+        // === Мерцание лампы в комнате (атмосферный эффект) ===
+        if (Game.location === 'room' && Game.roomLight) {
+            const t = performance.now() * 0.01;
+            const flicker = 1.6 + Math.sin(t * 7.3) * 0.15 + Math.sin(t * 13.7) * 0.08;
+            Game.roomLight.intensity = flicker;
+        }
+        
+        Game.renderer.render(Game.scene, Game.camera);
+    }
+    
+    /**
+     * Показывает подсказку при наведении на интерактивный объект.
+     */
+    function updateInteractionHint() {
+        const hint = document.getElementById('interactionHint');
+        if (Game.dialogActive) {
+            hint.style.display = 'none';
+            return;
+        }
+        
+        Game.raycaster.setFromCamera(new THREE.Vector2(0, 0), Game.camera);
+        Game.raycaster.far = 3.0;
+        
+        const allMeshes = [];
+        Game.interactables.forEach(obj => {
+            if (!obj.visible) return;
+            obj.traverse(child => {
+                if (child.isMesh) allMeshes.push(child);
+            });
+        });
+        
+        const hits = Game.raycaster.intersectObjects(allMeshes, false);
+        if (hits.length > 0) {
+            let target = hits[0].object;
+            while (target && !target.userData.type) target = target.parent;
+            
+            if (target) {
+                let text = '';
+                if (target.userData.type === 'door' && !Game.doorOpened && Game.location === 'corridor') {
+                    text = '[E] Открыть дверь';
+                } else if (target.userData.type === 'vanyak' && Game.location === 'room') {
+                    text = '[E] Поговорить';
+                }
+                
+                if (text) {
+                    hint.textContent = text;
+                    hint.style.display = 'block';
+                } else {
+                    hint.style.display = 'none';
+                }
+            } else {
+                hint.style.display = 'none';
+            }
         } else {
-            if (newX >= ROOM.minX && newX <= ROOM.maxX) state.x = newX;
-            if (newY >= ROOM.minY && newY <= ROOM.maxY) state.y = newY;
+            hint.style.display = 'none';
         }
     }
     
-    // Обновление позиции игрока в мировых координатах
-    player.setAttribute('transform', `translate(${state.x}, ${state.y})`);
-    
-    // Камера следует за игроком
-    let camX, camY;
-    
-    if (state.location === 'corridor') {
-        camX = 400; // по центру (коридор узкий)
-        camY = Math.max(VP_H/2, Math.min(CORRIDOR.length - VP_H/2, state.y));
-    } else {
-        camX = Math.max(ROOM.minX + VP_W/2, Math.min(ROOM.maxX - VP_W/2, state.x));
-        camY = Math.max(ROOM.minY + VP_H/2, Math.min(ROOM.maxY - VP_H/2, state.y));
-    }
-    
-    world.setAttribute('transform', `translate(${VP_W/2 - camX}, ${VP_H/2 - camY})`);
-    
-    // Подсказка у двери
-    if (state.location === 'corridor' && state.y >= CORRIDOR.doorY - 60 && !state.doorOpen) {
-        doorHint.style.display = 'block';
-    } else {
-        doorHint.style.display = 'none';
-    }
-    
-    // Подсказка у ванякека
-    if (state.location === 'room' && !state.dialogActive) {
-        const dx = Math.abs(state.x - 800);
-        const dy = Math.abs(state.y - 550);
-        if (dx < 100 && dy < 100) {
-            vanyakHint.style.display = 'block';
-        } else {
-            vanyakHint.style.display = 'none';
-        }
-    } else {
-        vanyakHint.style.display = 'none';
-    }
-    
-    requestAnimationFrame(update);
-}
+    return { initScene, update };
+})();
 
-// Инициализация
-updateFlashlight();
-update();
+/* =========================================================================
+   BOOTSTRAP — запуск игры
+   ========================================================================= */
+window.addEventListener('load', () => {
+    GameLogic.initScene();
+    GameLogic.update();
+});
+
+// GitHub: KilixKilik
 </script>
 
 </body>
