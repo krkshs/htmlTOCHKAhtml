@@ -1,310 +1,610 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тёмный Коридор</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: #000;
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-        }
-        #game {
-            border: 2px solid #333;
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-        }
-        #dialogue {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: #fff;
-            padding: 20px;
-            border: 2px solid #666;
-            max-width: 600px;
-            display: none;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        #instructions {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #666;
-            font-size: 12px;
-            text-align: center;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Тёмный Коридор</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+        font-family: 'Courier New', monospace;
+    }
+    #game {
+        background: #000;
+        display: block;
+        image-rendering: pixelated;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: crisp-edges;
+        width: 100vw;
+        height: 100vh;
+        max-width: 1000px;
+        max-height: 750px;
+    }
+    #dialog {
+        position: fixed;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.92);
+        color: #e0e0e0;
+        padding: 20px 30px;
+        border: 2px solid #555;
+        font-size: 18px;
+        max-width: 700px;
+        display: none;
+        z-index: 100;
+        line-height: 1.5;
+        letter-spacing: 0.5px;
+    }
+    #hint {
+        position: fixed;
+        top: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #888;
+        font-size: 14px;
+        letter-spacing: 1px;
+        z-index: 100;
+        text-align: center;
+    }
+    @keyframes flicker {
+        0%, 100% { opacity: 1; }
+        20% { opacity: 0.3; }
+        40% { opacity: 0.8; }
+        60% { opacity: 0.2; }
+        80% { opacity: 0.9; }
+    }
+    .flicker { animation: flicker 0.15s infinite; }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
 </head>
 <body>
-    <div id="instructions">
-        WASD/Стрелки - движение | F - фонарик | E - взаимодействие
-    </div>
-    <svg id="game" width="800" height="600" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <pattern id="wallPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                <rect width="20" height="20" fill="#1a1a1a"/>
-                <rect x="0" y="0" width="10" height="10" fill="#222"/>
-                <rect x="10" y="10" width="10" height="10" fill="#222"/>
-            </pattern>
-            
-            <radialGradient id="lightGradient">
-                <stop offset="0%" stop-color="rgba(255, 255, 200, 0.15)"/>
-                <stop offset="50%" stop-color="rgba(255, 255, 200, 0.05)"/>
-                <stop offset="100%" stop-color="rgba(255, 255, 200, 0)"/>
-            </radialGradient>
-        </defs>
-        
-        <rect width="800" height="600" fill="#000"/>
-        
-        <g id="corridor">
-            <rect x="0" y="0" width="300" height="600" fill="url(#wallPattern)"/>
-            <rect x="500" y="0" width="300" height="600" fill="url(#wallPattern)"/>
-            <rect x="300" y="0" width="200" height="600" fill="#1f1f1f"/>
-            <line x1="300" y1="0" x2="300" y2="600" stroke="#2a2a2a" stroke-width="2"/>
-            <line x1="500" y1="0" x2="500" y2="600" stroke="#2a2a2a" stroke-width="2"/>
-            
-            <g id="door">
-                <rect x="380" y="540" width="40" height="60" fill="#3a2515" stroke="#2a1a0f" stroke-width="2"/>
-                <rect x="395" y="565" width="10" height="3" fill="#ffcc00" rx="1"/>
-            </g>
-        </g>
-        
-        <g id="yellowRoom" style="display: none;">
-            <rect width="800" height="600" fill="#b8860b"/>
-            <rect x="30" y="30" width="740" height="540" fill="#d4a017" stroke="#8b6508" stroke-width="3"/>
-            
-            <g id="chair">
-                <rect x="380" y="320" width="40" height="8" fill="#654321"/>
-                <rect x="380" y="328" width="6" height="35" fill="#654321"/>
-                <rect x="414" y="328" width="6" height="35" fill="#654321"/>
-                <rect x="380" y="285" width="40" height="35" fill="#654321"/>
-                <rect x="380" y="360" width="6" height="8" fill="#654321"/>
-                <rect x="414" y="360" width="6" height="8" fill="#654321"/>
-            </g>
-            
-            <g id="vanyak">
-                <rect x="383" y="295" width="34" height="25" fill="#2a2a2a"/>
-                <rect x="388" y="278" width="24" height="22" fill="#a0826d"/>
-                <rect x="386" y="275" width="28" height="8" fill="#1a1a1a"/>
-                <rect x="391" y="288" width="6" height="2" fill="#1a1a1a"/>
-                <rect x="403" y="288" width="6" height="2" fill="#1a1a1a"/>
-                <rect x="383" y="298" width="6" height="18" fill="#2a2a2a"/>
-                <rect x="411" y="298" width="6" height="18" fill="#2a2a2a"/>
-                <rect x="388" y="320" width="9" height="25" fill="#1a1a1a"/>
-                <rect x="403" y="320" width="9" height="25" fill="#1a1a1a"/>
-                <rect x="387" y="345" width="11" height="6" fill="#0f0f0f"/>
-                <rect x="402" y="345" width="11" height="6" fill="#0f0f0f"/>
-            </g>
-        </g>
-        
-        <g id="player">
-            <rect x="395" y="295" width="10" height="10" fill="#4a90e2"/>
-            <rect x="397" y="293" width="6" height="4" fill="#ffdbac"/>
-        </g>
-        
-        <circle id="flashlight" cx="400" cy="300" r="120" fill="url(#lightGradient)" style="display: none;"/>
-        
-        <rect id="darkness" width="800" height="600" fill="rgba(0,0,0,0.8)" style="pointer-events: none;"/>
-    </svg>
-    
-    <div id="dialogue"></div>
 
-    <script>
-        const player = document.getElementById('player');
-        const flashlight = document.getElementById('flashlight');
-        const darkness = document.getElementById('darkness');
-        const door = document.getElementById('door');
-        const dialogue = document.getElementById('dialogue');
-        const corridor = document.getElementById('corridor');
-        const yellowRoom = document.getElementById('yellowRoom');
+<div id="hint">WASD — движение | F — фонарик | E — взаимодействие</div>
+
+<svg id="game" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+    <defs>
+        <pattern id="wallTex" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+            <rect width="16" height="16" fill="#1a1410"/>
+            <rect x="0" y="0" width="8" height="8" fill="#201812"/>
+            <rect x="8" y="8" width="8" height="8" fill="#161008"/>
+            <rect x="2" y="10" width="4" height="2" fill="#0f0a05"/>
+            <rect x="10" y="2" width="4" height="2" fill="#0f0a05"/>
+        </pattern>
         
-        let playerX = 400;
-        let playerY = 300;
-        let flashlightOn = false;
-        let inCorridor = true;
-        let doorOpen = false;
-        let dialogueActive = false;
-        let dialogueStep = 0;
-        let showHint = false;
+        <pattern id="floorTex" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+            <rect width="32" height="32" fill="#1c1c1c"/>
+            <rect x="0" y="0" width="16" height="16" fill="#222222"/>
+            <rect x="16" y="16" width="16" height="16" fill="#222222"/>
+            <rect x="2" y="4" width="2" height="2" fill="#2a2a2a"/>
+            <rect x="20" y="22" width="2" height="2" fill="#2a2a2a"/>
+        </pattern>
         
-        const speed = 3;
-        const keys = {};
+        <pattern id="yellowFloor" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+            <rect width="48" height="48" fill="#b8860b"/>
+            <rect x="0" y="0" width="24" height="24" fill="#c89419"/>
+            <rect x="24" y="24" width="24" height="24" fill="#c89419"/>
+            <rect x="46" y="0" width="2" height="48" fill="#8b6508"/>
+            <rect x="0" y="46" width="48" height="2" fill="#8b6508"/>
+        </pattern>
         
-        const dialogues = [
-            "*тишина*",
-            "Ванякек? Ты... ты здесь?",
-            "*лёгкий шёпот из ниоткуда*",
-            "...",
-            "Ты наконец пришёл. Я ждал тебя так долго.",
-            "Помнишь, как мы вместе проходили этот коридор? Я всегда знал, что ты найдёшь меня.",
-            "Но теперь я здесь. В этой жёлтой комнате. Навсегда.",
-            "*его голова медленно поднимается, глаза открываются*",
-            "И ты... ты тоже скоро будешь здесь. Со мной.",
-            "Навсегда.",
-            "*экран начинает мерцать*"
-        ];
-        
-        function movePlayer() {
-            if (dialogueActive) return;
+        <mask id="darkMask">
+            <rect x="-1000" y="-1000" width="4000" height="4000" fill="black"/>
+            <circle id="maskLight" cx="400" cy="300" r="80" fill="white"/>
+        </mask>
+    </defs>
+    
+    <!-- Игровой мир в мировых координатах -->
+    <g id="world">
+        <!-- Сцена коридора -->
+        <g id="corridorScene">
+            <!-- Пол коридора -->
+            <rect x="200" y="0" width="400" height="1900" fill="url(#floorTex)"/>
             
-            let dx = 0, dy = 0;
+            <!-- Левая стена -->
+            <rect x="0" y="0" width="200" height="1900" fill="url(#wallTex)"/>
+            <rect x="195" y="0" width="5" height="1900" fill="#0a0604"/>
             
-            if (keys['w'] || keys['arrowup']) dy = -speed;
-            if (keys['s'] || keys['arrowdown']) dy = speed;
-            if (keys['a'] || keys['arrowleft']) dx = -speed;
-            if (keys['d'] || keys['arrowright']) dx = speed;
+            <!-- Правая стена -->
+            <rect x="600" y="0" width="200" height="1900" fill="url(#wallTex)"/>
+            <rect x="600" y="0" width="5" height="1900" fill="#0a0604"/>
             
-            if (inCorridor) {
-                const newX = playerX + dx;
-                const newY = playerY + dy;
+            <!-- Декор коридора: трещины -->
+            <g fill="#0a0604">
+                <rect x="150" y="300" width="2" height="20"/>
+                <rect x="152" y="310" width="2" height="15"/>
+                <rect x="148" y="315" width="2" height="10"/>
                 
-                if (newX > 310 && newX < 490) playerX = newX;
-                if (newY > 20 && newY < 580) playerY = newY;
-            } else {
-                playerX += dx;
-                playerY += dy;
-                playerX = Math.max(40, Math.min(760, playerX));
-                playerY = Math.max(40, Math.min(560, playerY));
-            }
+                <rect x="650" y="500" width="2" height="25"/>
+                <rect x="648" y="515" width="2" height="15"/>
+                
+                <rect x="160" y="800" width="2" height="18"/>
+                <rect x="162" y="812" width="2" height="12"/>
+                
+                <rect x="640" y="1100" width="2" height="30"/>
+                <rect x="638" y="1118" width="2" height="14"/>
+            </g>
             
-            player.setAttribute('transform', `translate(${playerX - 400}, ${playerY - 300})`);
+            <!-- Пятна на полу -->
+            <g fill="#151515">
+                <rect x="280" y="400" width="24" height="16"/>
+                <rect x="290" y="410" width="16" height="8"/>
+                
+                <rect x="480" y="700" width="32" height="20"/>
+                <rect x="490" y="715" width="16" height="10"/>
+                
+                <rect x="240" y="1200" width="28" height="18"/>
+                <rect x="520" y="1400" width="20" height="14"/>
+            </g>
             
-            if (flashlightOn && inCorridor) {
-                flashlight.setAttribute('cx', playerX);
-                flashlight.setAttribute('cy', playerY);
-                flashlight.style.display = 'block';
-            } else {
-                flashlight.style.display = 'none';
-            }
+            <!-- Дверь в конце коридора -->
+            <g id="door">
+                <rect x="340" y="1780" width="120" height="180" fill="#3a2515"/>
+                <rect x="340" y="1780" width="120" height="8" fill="#2a1a0a"/>
+                <rect x="340" y="1780" width="8" height="180" fill="#2a1a0a"/>
+                <rect x="452" y="1780" width="8" height="180" fill="#2a1a0a"/>
+                
+                <!-- Панели двери -->
+                <rect x="360" y="1810" width="80" height="60" fill="#2a1a0a" stroke="#1a1005" stroke-width="2"/>
+                <rect x="360" y="1890" width="80" height="60" fill="#2a1a0a" stroke="#1a1005" stroke-width="2"/>
+                
+                <!-- Ручка -->
+                <rect x="430" y="1870" width="12" height="4" fill="#ffcc00"/>
+                <rect x="438" y="1866" width="4" height="12" fill="#ffcc00"/>
+            </g>
             
-            if (inCorridor && playerY > 520 && !doorOpen && !showHint) {
-                showHint = true;
-                dialogue.innerHTML = 'Подойди ближе и нажми E, чтобы открыть дверь';
-                dialogue.style.display = 'block';
-                setTimeout(() => {
-                    dialogue.style.display = 'none';
-                    showHint = false;
-                }, 3000);
-            }
-            
-            if (!inCorridor && Math.abs(playerX - 400) < 60 && Math.abs(playerY - 310) < 60 && !dialogueActive && !showHint) {
-                showHint = true;
-                dialogue.innerHTML = 'Подойди к ванякеку и нажми E';
-                dialogue.style.display = 'block';
-                setTimeout(() => {
-                    dialogue.style.display = 'none';
-                    showHint = false;
-                }, 3000);
-            }
-        }
+            <!-- Подсказка у двери -->
+            <g id="doorHint" style="display:none">
+                <rect x="330" y="1760" width="140" height="20" fill="rgba(0,0,0,0.8)" stroke="#666" stroke-width="1"/>
+                <text x="400" y="1775" text-anchor="middle" fill="#ccc" font-size="12" font-family="Courier New">НАЖМИ [E]</text>
+            </g>
+        </g>
         
-        document.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-            keys[key] = true;
+        <!-- Сцена жёлтой комнаты -->
+        <g id="roomScene" style="display:none">
+            <!-- Пол -->
+            <rect x="0" y="0" width="1600" height="1200" fill="url(#yellowFloor)"/>
             
-            if (key === 'f' && inCorridor) {
-                flashlightOn = !flashlightOn;
-                if (flashlightOn) {
-                    flashlight.setAttribute('cx', playerX);
-                    flashlight.setAttribute('cy', playerY);
-                }
-            }
+            <!-- Стены -->
+            <rect x="0" y="0" width="1600" height="120" fill="#d4a017" stroke="#8b6508" stroke-width="3"/>
+            <rect x="0" y="0" width="120" height="1200" fill="#d4a017" stroke="#8b6508" stroke-width="3"/>
+            <rect x="1480" y="0" width="120" height="1200" fill="#d4a017" stroke="#8b6508" stroke-width="3"/>
             
-            if (key === 'e') {
-                if (inCorridor && playerY > 520 && !doorOpen) {
-                    doorOpen = true;
-                    door.style.display = 'none';
+            <!-- Плинтус -->
+            <rect x="120" y="115" width="1360" height="5" fill="#8b6508"/>
+            <rect x="115" y="120" width="5" height="1080" fill="#8b6508"/>
+            <rect x="1480" y="120" width="5" height="1080" fill="#8b6508"/>
+            
+            <!-- Картина на стене -->
+            <g transform="translate(400, 140)">
+                <rect x="-60" y="0" width="120" height="80" fill="#2a1a0a" stroke="#1a0a00" stroke-width="4"/>
+                <rect x="-56" y="4" width="112" height="72" fill="#4a3020"/>
+                <rect x="-40" y="20" width="80" height="40" fill="#6a4030"/>
+                <rect x="-20" y="30" width="40" height="20" fill="#8a5040"/>
+            </g>
+            
+            <!-- Лампа на потолке (вид сверху - круг) -->
+            <g transform="translate(800, 600)">
+                <circle cx="0" cy="0" r="40" fill="#3a3a3a" opacity="0.6"/>
+                <circle cx="0" cy="0" r="25" fill="#6a6a5a" opacity="0.7"/>
+                <circle cx="0" cy="0" r="12" fill="#a0a080"/>
+            </g>
+            
+            <!-- Стул (вид сверху) -->
+            <g id="chair" transform="translate(800, 550)">
+                <!-- Ножки -->
+                <rect x="-45" y="-45" width="8" height="8" fill="#3a2510"/>
+                <rect x="37" y="-45" width="8" height="8" fill="#3a2510"/>
+                <rect x="-45" y="37" width="8" height="8" fill="#3a2510"/>
+                <rect x="37" y="37" width="8" height="8" fill="#3a2510"/>
+                <!-- Сиденье -->
+                <rect x="-40" y="-40" width="80" height="80" fill="#6b4423" stroke="#3a2510" stroke-width="3"/>
+                <rect x="-36" y="-36" width="72" height="72" fill="#7a5230"/>
+                <!-- Спинка -->
+                <rect x="-40" y="-55" width="80" height="15" fill="#5a3518" stroke="#3a2510" stroke-width="2"/>
+            </g>
+            
+            <!-- Ванякек на стуле -->
+            <g id="vanyak" transform="translate(800, 550)">
+                <!-- Тело (вид сверху, в чёрной одежде) -->
+                <rect x="-30" y="-25" width="60" height="50" fill="#0a0a0a"/>
+                <rect x="-28" y="-23" width="56" height="46" fill="#1a1a1a"/>
+                
+                <!-- Руки свисают -->
+                <rect x="-38" y="-15" width="10" height="30" fill="#1a1a1a"/>
+                <rect x="28" y="-15" width="10" height="30" fill="#1a1a1a"/>
+                
+                <!-- Ладони -->
+                <rect x="-37" y="12" width="8" height="8" fill="#5a5a6a"/>
+                <rect x="29" y="12" width="8" height="8" fill="#5a5a6a"/>
+                
+                <!-- Голова (опущена вперёд) -->
+                <g id="vanyakHead">
+                    <rect x="-18" y="-38" width="36" height="32" fill="#1a1a1a"/> <!-- Волосы -->
+                    <rect x="-15" y="-35" width="30" height="28" fill="#6a6a7a"/> <!-- Лицо (серое, мёртвое) -->
                     
-                    dialogue.innerHTML = '*дверь скрипит и открывается*';
-                    dialogue.style.display = 'block';
-                    
-                    setTimeout(() => {
-                        dialogue.style.display = 'none';
-                        corridor.style.display = 'none';
-                        yellowRoom.style.display = 'block';
-                        darkness.style.display = 'none';
-                        inCorridor = false;
-                        playerX = 400;
-                        playerY = 550;
-                        player.setAttribute('transform', `translate(${playerX - 400}, ${playerY - 300})`);
+                    <!-- Глаза - X (мёртвые) -->
+                    <g id="vanyakEyes">
+                        <!-- Левый глаз -->
+                        <rect x="-10" y="-25" width="3" height="3" fill="#1a1a1a"/>
+                        <rect x="-7" y="-22" width="3" height="3" fill="#1a1a1a"/>
+                        <rect x="-7" y="-25" width="3" height="3" fill="#1a1a1a" opacity="0.5"/>
+                        <rect x="-10" y="-22" width="3" height="3" fill="#1a1a1a" opacity="0.5"/>
                         
-                        dialogue.innerHTML = '*ты входишь в жёлтую комнату...*';
-                        dialogue.style.display = 'block';
-                        setTimeout(() => {
-                            dialogue.style.display = 'none';
-                        }, 2000);
-                    }, 1500);
-                }
+                        <!-- Правый глаз -->
+                        <rect x="4" y="-25" width="3" height="3" fill="#1a1a1a"/>
+                        <rect x="7" y="-22" width="3" height="3" fill="#1a1a1a"/>
+                        <rect x="7" y="-25" width="3" height="3" fill="#1a1a1a" opacity="0.5"/>
+                        <rect x="4" y="-22" width="3" height="3" fill="#1a1a1a" opacity="0.5"/>
+                    </g>
+                    
+                    <!-- Рот -->
+                    <rect x="-5" y="-14" width="10" height="2" fill="#2a1a1a"/>
+                </g>
                 
-                if (!inCorridor && Math.abs(playerX - 400) < 60 && Math.abs(playerY - 310) < 60 && !dialogueActive) {
-                    startDialogue();
-                }
-            }
-        });
+                <!-- Ноги -->
+                <rect x="-22" y="25" width="18" height="20" fill="#0a0a0a"/>
+                <rect x="4" y="25" width="18" height="20" fill="#0a0a0a"/>
+                
+                <!-- Ботинки -->
+                <rect x="-24" y="42" width="22" height="8" fill="#000"/>
+                <rect x="2" y="42" width="22" height="8" fill="#000"/>
+            </g>
+            
+            <!-- Подсказка у ванякека -->
+            <g id="vanyakHint" style="display:none">
+                <rect x="720" y="460" width="160" height="24" fill="rgba(0,0,0,0.8)" stroke="#666" stroke-width="1"/>
+                <text x="800" y="477" text-anchor="middle" fill="#ccc" font-size="13" font-family="Courier New">ПОГОВОРИТЬ [E]</text>
+            </g>
+        </g>
         
-        document.addEventListener('keyup', (e) => {
-            keys[e.key.toLowerCase()] = false;
-        });
-        
-        function startDialogue() {
-            dialogueActive = true;
-            dialogueStep = 0;
-            showDialogueLine();
+        <!-- Игрок -->
+        <g id="player">
+            <!-- Тень -->
+            <ellipse cx="0" cy="20" rx="18" ry="6" fill="rgba(0,0,0,0.5)"/>
+            
+            <!-- Ноги -->
+            <rect x="-10" y="12" width="8" height="12" fill="#1a1a3a"/>
+            <rect x="2" y="12" width="8" height="12" fill="#1a1a3a"/>
+            
+            <!-- Тело -->
+            <rect x="-12" y="-8" width="24" height="22" fill="#4a6090"/>
+            <rect x="-10" y="-6" width="20" height="18" fill="#5a70a0"/>
+            
+            <!-- Руки -->
+            <rect x="-16" y="-6" width="6" height="16" fill="#4a6090"/>
+            <rect x="10" y="-6" width="6" height="16" fill="#4a6090"/>
+            
+            <!-- Голова -->
+            <rect x="-8" y="-22" width="16" height="16" fill="#d4a580"/>
+            <rect x="-6" y="-20" width="12" height="12" fill="#e0b890"/>
+            
+            <!-- Волосы -->
+            <rect x="-9" y="-24" width="18" height="6" fill="#3a2510"/>
+            <rect x="-10" y="-22" width="2" height="4" fill="#3a2510"/>
+            <rect x="8" y="-22" width="2" height="4" fill="#3a2510"/>
+            
+            <!-- Глаза -->
+            <rect x="-4" y="-16" width="2" height="2" fill="#000"/>
+            <rect x="2" y="-16" width="2" height="2" fill="#000"/>
+            
+            <!-- Фонарик в руке (когда включён) -->
+            <g id="flashlightItem" style="display:none">
+                <rect x="10" y="4" width="14" height="6" fill="#333"/>
+                <rect x="22" y="3" width="4" height="8" fill="#ffeb99"/>
+            </g>
+        </g>
+    </g>
+    
+    <!-- Тьма с маской фонарика (в экранных координатах) -->
+    <rect id="darkness" x="0" y="0" width="800" height="600" fill="black" opacity="0.97" mask="url(#darkMask)"/>
+</svg>
+
+<div id="dialog"></div>
+
+<script>
+const svg = document.getElementById('game');
+const world = document.getElementById('world');
+const player = document.getElementById('player');
+const maskLight = document.getElementById('maskLight');
+const dialog = document.getElementById('dialog');
+const doorHint = document.getElementById('doorHint');
+const vanyakHint = document.getElementById('vanyakHint');
+const corridorScene = document.getElementById('corridorScene');
+const roomScene = document.getElementById('roomScene');
+const door = document.getElementById('door');
+const flashlightItem = document.getElementById('flashlightItem');
+const vanyakEyes = document.getElementById('vanyakEyes');
+const vanyakHead = document.getElementById('vanyakHead');
+
+// Состояние игры
+let state = {
+    x: 400,
+    y: 300,
+    flashlight: false,
+    location: 'corridor', // 'corridor' или 'room'
+    doorOpen: false,
+    dialogActive: false,
+    dialogStep: 0,
+    vanyakAlive: false, // для анимации
+    keys: {}
+};
+
+const SPEED = 1.8;
+const VP_W = 800;
+const VP_H = 600;
+
+// Границы мира
+const CORRIDOR = {
+    minX: 220, maxX: 580,
+    minY: 150, maxY: 1880,
+    doorY: 1760,
+    length: 1900
+};
+
+const ROOM = {
+    minX: 150, maxX: 1450,
+    minY: 150, maxY: 1050
+};
+
+// Диалоги ванякека
+const dialogues = [
+    { text: "*тишина... только слабое потрескивание лампы*", delay: 2500 },
+    { text: "Ты... кто? Ваня? Это ты?", delay: 2500 },
+    { text: "*голова ванякека медленно поднимается*", delay: 2000, action: 'lift_head' },
+    { text: "Наконец-то... я так долго ждал.", delay: 3000 },
+    { text: "Помнишь тот коридор? Мы всегда обещали пройти его вместе до конца...", delay: 3500 },
+    { text: "Но я дошёл один. И теперь я здесь. В этой жёлтой комнате.", delay: 3500 },
+    { text: "Знаешь, почему комната жёлтая?", delay: 2500 },
+    { text: "Потому что жёлтый — цвет ожидания. Цвет одиночества.", delay: 3500 },
+    { text: "*его глаза медленно открываются — они абсолютно белые*", delay: 2500, action: 'open_eyes' },
+    { text: "И я больше никогда не буду один.", delay: 3000 },
+    { text: "Садись. Рядом. Здесь есть второй стул...", delay: 3000 },
+    { text: "...правда?", delay: 2500 }
+];
+
+// Ввод
+document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    state.keys[k] = true;
+    
+    if (k === 'f' && state.location === 'corridor') {
+        state.flashlight = !state.flashlight;
+        flashlightItem.style.display = state.flashlight ? 'block' : 'none';
+        updateFlashlight();
+    }
+    
+    if (k === 'e') handleInteraction();
+});
+
+document.addEventListener('keyup', (e) => {
+    state.keys[e.key.toLowerCase()] = false;
+});
+
+function handleInteraction() {
+    if (state.dialogActive) return;
+    
+    if (state.location === 'corridor') {
+        // Открыть дверь
+        if (state.y >= CORRIDOR.doorY - 40 && !state.doorOpen) {
+            state.doorOpen = true;
+            showDialog("*дверь со скрипом открывается...*");
+            
+            setTimeout(() => {
+                hideDialog();
+                enterRoom();
+            }, 2000);
         }
-        
-        function showDialogueLine() {
-            if (dialogueStep < dialogues.length) {
-                dialogue.innerHTML = dialogues[dialogueStep];
-                dialogue.style.display = 'block';
-                dialogueStep++;
-                
-                const delay = dialogueStep < 3 ? 2000 : 3500;
-                setTimeout(() => {
-                    showDialogueLine();
-                }, delay);
-            } else {
-                dialogue.style.display = 'none';
-                dialogueActive = false;
-                
-                setTimeout(() => {
-                    document.body.style.animation = 'flicker 0.15s infinite';
-                    setTimeout(() => {
-                        alert('Ванякек забрал тебя с собой в жёлтую комнату...\n\nТы теперь здесь. Навсегда.');
-                        location.reload();
-                    }, 2500);
-                }, 1000);
-            }
+    } else if (state.location === 'room') {
+        // Подойти к ванякеку
+        const dx = Math.abs(state.x - 800);
+        const dy = Math.abs(state.y - 550);
+        if (dx < 80 && dy < 80) {
+            startDialogue();
         }
-        
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes flicker {
-                0%, 100% { opacity: 1; }
-                25% { opacity: 0.7; }
-                50% { opacity: 0.4; }
-                75% { opacity: 0.8; }
-            }
+    }
+}
+
+function enterRoom() {
+    state.location = 'room';
+    state.flashlight = false;
+    flashlightItem.style.display = 'none';
+    
+    corridorScene.style.display = 'none';
+    roomScene.style.display = 'block';
+    
+    // Позиция игрока при входе в комнату
+    state.x = 800;
+    state.y = 1000;
+    
+    updateFlashlight();
+    
+    setTimeout(() => {
+        showDialog("*жёлтый свет. запах пыли и чего-то старого...*");
+        setTimeout(hideDialog, 3000);
+    }, 500);
+}
+
+function startDialogue() {
+    state.dialogActive = true;
+    state.dialogStep = 0;
+    showDialog(dialogues[0].text);
+    setTimeout(nextDialogue, dialogues[0].delay);
+}
+
+function nextDialogue() {
+    state.dialogStep++;
+    
+    if (state.dialogStep >= dialogues.length) {
+        endDialogue();
+        return;
+    }
+    
+    const line = dialogues[state.dialogStep];
+    showDialog(line.text);
+    
+    if (line.action === 'lift_head') {
+        vanyakHead.style.transition = 'transform 2s';
+        vanyakHead.setAttribute('transform', 'translate(0, -8)');
+    }
+    if (line.action === 'open_eyes') {
+        vanyakEyes.innerHTML = `
+            <rect x="-10" y="-26" width="6" height="4" fill="#fff"/>
+            <rect x="4" y="-26" width="6" height="4" fill="#fff"/>
+            <rect x="-8" y="-25" width="2" height="2" fill="#ff3030"/>
+            <rect x="6" y="-25" width="2" height="2" fill="#ff3030"/>
         `;
-        document.head.appendChild(style);
+    }
+    
+    setTimeout(nextDialogue, line.delay);
+}
+
+function endDialogue() {
+    hideDialog();
+    state.dialogActive = false;
+    
+    setTimeout(() => {
+        svg.classList.add('flicker');
+        showDialog("*что-то холодное касается твоей руки...*");
         
-        function gameLoop() {
-            movePlayer();
-            requestAnimationFrame(gameLoop);
+        setTimeout(() => {
+            svg.style.transition = 'opacity 3s';
+            svg.style.opacity = '0';
+            
+            setTimeout(() => {
+                document.body.style.background = '#b8860b';
+                document.body.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 50%; left: 50%;
+                        transform: translate(-50%, -50%);
+                        color: #2a1a0a;
+                        font-family: 'Courier New', monospace;
+                        font-size: 24px;
+                        text-align: center;
+                        line-height: 2;
+                        max-width: 600px;
+                        padding: 40px;
+                    ">
+                        <div style="font-size: 48px; margin-bottom: 30px;">☠</div>
+                        <div>Ты сел на второй стул.</div>
+                        <div>Рядом с ванякеком.</div>
+                        <div style="margin-top: 40px; font-size: 16px; opacity: 0.6;">
+                            Жёлтая комната теперь твоя.<br>
+                            Навсегда.
+                        </div>
+                        <div style="margin-top: 60px; font-size: 14px; opacity: 0.4;">
+                            [нажми F5, чтобы попробовать снова]
+                        </div>
+                    </div>
+                `;
+            }, 3500);
+        }, 2500);
+    }, 1500);
+}
+
+function showDialog(text) {
+    dialog.textContent = text;
+    dialog.style.display = 'block';
+}
+
+function hideDialog() {
+    dialog.style.display = 'none';
+}
+
+function updateFlashlight() {
+    if (state.location === 'corridor') {
+        const radius = state.flashlight ? 280 : 90;
+        maskLight.setAttribute('r', radius);
+        maskLight.setAttribute('fill', state.flashlight ? 'white' : 'white');
+        // Добавим мягкий градиент света для фонарика
+        if (state.flashlight) {
+            maskLight.setAttribute('fill', 'url(#lightGrad)');
+            // Но проще - просто круг побольше
+        }
+    } else {
+        // В комнате темно не нужно, но добавим лёгкое затемнение для атмосферы
+        maskLight.setAttribute('r', 350);
+    }
+}
+
+function update() {
+    if (!state.dialogActive) {
+        let dx = 0, dy = 0;
+        if (state.keys['w'] || state.keys['arrowup']) dy = -SPEED;
+        if (state.keys['s'] || state.keys['arrowdown']) dy = SPEED;
+        if (state.keys['a'] || state.keys['arrowleft']) dx = -SPEED;
+        if (state.keys['d'] || state.keys['arrowright']) dx = SPEED;
+        
+        // Нормализация диагонали
+        if (dx !== 0 && dy !== 0) {
+            dx *= 0.707;
+            dy *= 0.707;
         }
         
-        gameLoop();
-    </script>
+        const newX = state.x + dx;
+        const newY = state.y + dy;
+        
+        if (state.location === 'corridor') {
+            if (newX >= CORRIDOR.minX && newX <= CORRIDOR.maxX) state.x = newX;
+            if (newY >= CORRIDOR.minY && newY <= CORRIDOR.maxY) state.y = newY;
+        } else {
+            if (newX >= ROOM.minX && newX <= ROOM.maxX) state.x = newX;
+            if (newY >= ROOM.minY && newY <= ROOM.maxY) state.y = newY;
+        }
+    }
+    
+    // Обновление позиции игрока в мировых координатах
+    player.setAttribute('transform', `translate(${state.x}, ${state.y})`);
+    
+    // Камера следует за игроком
+    let camX, camY;
+    
+    if (state.location === 'corridor') {
+        camX = 400; // по центру (коридор узкий)
+        camY = Math.max(VP_H/2, Math.min(CORRIDOR.length - VP_H/2, state.y));
+    } else {
+        camX = Math.max(ROOM.minX + VP_W/2, Math.min(ROOM.maxX - VP_W/2, state.x));
+        camY = Math.max(ROOM.minY + VP_H/2, Math.min(ROOM.maxY - VP_H/2, state.y));
+    }
+    
+    world.setAttribute('transform', `translate(${VP_W/2 - camX}, ${VP_H/2 - camY})`);
+    
+    // Подсказка у двери
+    if (state.location === 'corridor' && state.y >= CORRIDOR.doorY - 60 && !state.doorOpen) {
+        doorHint.style.display = 'block';
+    } else {
+        doorHint.style.display = 'none';
+    }
+    
+    // Подсказка у ванякека
+    if (state.location === 'room' && !state.dialogActive) {
+        const dx = Math.abs(state.x - 800);
+        const dy = Math.abs(state.y - 550);
+        if (dx < 100 && dy < 100) {
+            vanyakHint.style.display = 'block';
+        } else {
+            vanyakHint.style.display = 'none';
+        }
+    } else {
+        vanyakHint.style.display = 'none';
+    }
+    
+    requestAnimationFrame(update);
+}
+
+// Инициализация
+updateFlashlight();
+update();
+</script>
+
 </body>
 </html>
