@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Craft Racer 3D</title>
+    <title>Retro Voxel Racer 3D</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #1a1a2e;
+            background-color: #111;
             font-family: 'Courier New', monospace;
             user-select: none;
         }
@@ -17,294 +17,396 @@
             top: 20px;
             left: 20px;
             color: #fff;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
-            text-shadow: 3px 3px 0px #000;
-            line-height: 1.5;
-            z-index: 10;
-        }
-        #instructions {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ffff00;
-            font-size: 18px;
             text-shadow: 2px 2px 0px #000;
-            text-align: center;
-            z-index: 10;
+            display: none;
+            z-index: 5;
         }
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(16, 16, 30, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            color: #fff;
+        }
+        h1 {
+            font-size: 48px;
+            color: #ff0055;
+            text-shadow: 4px 4px 0px #00ffff;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .btn {
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: inherit;
+            background: #00ffff;
+            border: 4px solid #fff;
+            color: #000;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 5px 5px 0px #ff0055;
+            transition: 0.1s;
+        }
+        .btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0px #ff0055;
+        }
+        .btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 2px 2px 0px #ff0055;
+        }
+        #game-over-screen { display: none; }
     </style>
-    <!-- Подключаем Three.js для работы с 3D графикой -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+
     <div id="ui">
         СКОРОСТЬ: <span id="speed">0</span> КМ/Ч<br>
         ДИСТАНЦИЯ: <span id="distance">0</span> М
     </div>
-    <div id="instructions">УПРАВЛЕНИЕ: СТРЕЛКИ или WASD</div>
+
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <div id="main-menu" class="screen">
+        <h1>CRAFT RACER 3D</h1>
+        <button class="btn" onclick="startGame()">СТАРТ</button>
+    </div>
+
+    <!-- ЭКРАН СМЕРТИ -->
+    <div id="game-over-screen" class="screen">
+        <h1 style="color: #ff3333; text-shadow: 4px 4px 0px #000;">КРАШ!</h1>
+        <p id="final-score" style="font-size: 20px; margin-bottom: 20px;"></p>
+        <button class="btn" onclick="restartGame()">ПОВТОРИТЬ</button>
+    </div>
 
     <script>
-        // --- НАСТРОЙКА СЦЕНЫ И КАМЕРЫ ---
+        // --- НАСТРОЙКА СЦЕНЫ ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a2e);
-        // Туман для плавного ретро-горизонта
-        scene.fog = new THREE.FogExp2(0x1a1a2e, 0.015);
+        scene.background = new THREE.Color(0x0f0c1b);
+        scene.fog = new THREE.FogExp2(0x0f0c1b, 0.02);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: false }); // Выключаем сглаживание для пиксельного стиля
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- ОСВЕЩЕНИЕ ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.75);
-        dirLight.position.set(15, 30, 15);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(20, 40, 20);
         scene.add(dirLight);
 
-        // --- ИГРОК (МАШИНКА ИЗ БЛОКОВ) ---
+        // --- СИНТЕЗАТОР SVG ТЕКСТУР ---
+        function createSVGTexture(svgString) {
+            const v = encodeURIComponent(svgString);
+            const img = new Image();
+            img.src = `data:image/svg+xml;charset=utf-8,${v}`;
+            const texture = new THREE.Texture(img);
+            img.onload = () => texture.needsUpdate = true;
+            return texture;
+        }
+
+        // Ретро-текстуры через SVG
+        const playerSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#3498db"/><rect x="4" y="4" width="56" height="56" fill="none" stroke="#2980b9" stroke-width="4"/><rect x="12" y="48" width="12" height="8" fill="#ffff00"/><rect x="40" y="48" width="12" height="8" fill="#ffff00"/><rect x="16" y="4" width="32" height="6" fill="#ff3300"/></svg>`;
+        const trafficSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#e67e22"/><rect x="4" y="4" width="56" height="56" fill="none" stroke="#d35400" stroke-width="4"/><rect x="12" y="8" width="12" height="8" fill="#ffffff"/><rect x="40" y="8" width="12" height="8" fill="#ffffff"/></svg>`;
+        const roadSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="128" height="128" fill="#2c3e50"/><path d="M0 0h128v4H0zm0 124h128v4H0z" fill="#34495e"/></svg>`;
+
+        const playerMat = new THREE.MeshLambertMaterial({ map: createSVGTexture(playerSvg) });
+        const trafficMat = new THREE.MeshLambertMaterial({ map: createSVGTexture(trafficSvg) });
+        const roadMat = new THREE.MeshLambertMaterial({ map: createSVGTexture(roadSvg) });
+
+        // --- СОЗДАНИЕ ИГРОКА ---
         const car = new THREE.Group();
-        
-        // Главный кузов
-        const bodyGeom = new THREE.BoxGeometry(1.8, 0.6, 3.4);
-        const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
-        const carBody = new THREE.Mesh(bodyGeom, bodyMat);
-        carBody.position.y = 0.5;
+        const bodyGeom = new THREE.BoxGeometry(1.6, 0.6, 3.0);
+        const carBody = new THREE.Mesh(bodyGeom, playerMat);
+        carBody.position.y = 0.4;
         car.add(carBody);
 
-        // Кабина (стекло/крыша)
-        const cabinGeom = new THREE.BoxGeometry(1.4, 0.6, 1.8);
-        const cabinMat = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
+        const cabinGeom = new THREE.BoxGeometry(1.2, 0.5, 1.5);
+        const cabinMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
         const cabin = new THREE.Mesh(cabinGeom, cabinMat);
-        cabin.position.set(0, 1.1, -0.2);
+        cabin.position.set(0, 0.9, -0.2);
         car.add(cabin);
 
-        // Колеса
-        const wheelGeom = new THREE.BoxGeometry(0.4, 0.7, 0.7);
-        const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+        const wheelGeom = new THREE.BoxGeometry(0.35, 0.6, 0.6);
+        const wheelMat = new THREE.MeshLambertMaterial({ color: 0x050505 });
         const wheels = [];
-        const wheelPositions = [
-            [1, 0.35, 1], [-1, 0.35, 1],
-            [1, 0.35, -1], [-1, 0.35, -1]
-        ];
-
-        wheelPositions.forEach(pos => {
-            const wheel = new THREE.Mesh(wheelGeom, wheelMat);
-            wheel.position.set(pos[0], pos[1], pos[2]);
-            car.add(wheel);
-            wheels.push(wheel);
+        [ [0.9, 0.3, 0.9], [-0.9, 0.3, 0.9], [0.9, 0.3, -0.9], [-0.9, 0.3, -0.9] ].forEach(pos => {
+            const w = new THREE.Mesh(wheelGeom, wheelMat);
+            w.position.set(pos[0], pos[1], pos[2]);
+            car.add(w);
+            wheels.push(w);
         });
-
         scene.add(car);
 
-        // --- ДИНАМИКА И ФИЗИКА ---
+        // --- ЗВУКОВОЙ ДВИЖОК (WEB AUDIO API) ---
+        let audioCtx, engineOsc, bassOsc, audioStarted = false;
+
+        function initAudio() {
+            if (audioStarted) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Звук мотора
+            engineOsc = audioCtx.createOscillator();
+            const engineGain = audioCtx.createGain();
+            engineOsc.type = 'sawtooth';
+            engineOsc.frequency.setValueAtTime(30, audioCtx.currentTime);
+            engineGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            engineOsc.connect(engineGain);
+            engineGain.connect(audioCtx.destination);
+            engineOsc.start();
+
+            // Ретро-бас (музыкальный фон)
+            bassOsc = audioCtx.createOscillator();
+            const bassGain = audioCtx.createGain();
+            bassOsc.type = 'square';
+            bassOsc.frequency.setValueAtTime(55, audioCtx.currentTime); // Нота Ля
+            bassGain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            bassOsc.connect(bassGain);
+            bassGain.connect(audioCtx.destination);
+            bassOsc.start();
+
+            // Простой цикл изменения нот баса
+            setInterval(() => {
+                if(isPlaying) {
+                    const notes = [55, 48, 65, 51];
+                    const nextNote = notes[Math.floor(Math.random() * notes.length)];
+                    bassOsc.frequency.setValueAtTime(nextNote, audioCtx.currentTime);
+                }
+            }, 400);
+
+            audioStarted = true;
+        }
+
+        function playCrashSound() {
+            if (!audioCtx) return;
+            const noise = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            noise.type = 'triangle';
+            noise.frequency.setValueAtTime(120, audioCtx.currentTime);
+            noise.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+            noise.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+            noise.stop(audioCtx.currentTime + 0.4);
+        }
+
+        // --- НАСТРОЙКИ ДВИЖЕНИЯ ---
         let speed = 0;
-        const maxSpeed = 1.3;
-        const accel = 0.012;
-        const deccel = 0.008;
+        const maxSpeed = 0.75; // Отрегулированная скорость (медленнее и комфортнее)
+        const accel = 0.007;
+        const deccel = 0.012;
         let carX = 0;
+        let isPlaying = false;
 
-        const keys = { Forward: false, Backward: false, Left: false, Right: false };
+        const keys = { Forward: false, Brake: false, Left: false, Right: false };
 
-        // --- ПРОЦЕДУРНАЯ ГЕНЕРАЦИЯ МИРА (БЛОКИ) ---
-        const obstacles = [];
-        const segments = [];
+        // --- УПРАВЛЕНИЕ ---
+        const handleKey = (e, isDown) => {
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.Forward = isDown;
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.Brake = isDown; // Только тормоз!
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.Left = isDown;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.Right = isDown;
+        };
+        window.addEventListener('keydown', (e) => handleKey(e, true));
+        window.addEventListener('keyup', (e) => handleKey(e, false));
+
+        // --- МИР И ТРАФИК ---
+        let traffic = [];
+        let segments = [];
         let lastSegmentZ = 0;
-        const segmentLength = 8;
-        const maxSegments = 25;
+        const segmentLength = 10;
+        const maxSegments = 20;
 
         function createSegment(z) {
-            const segmentGroup = new THREE.Group();
-            const isEven = Math.floor(Math.abs(z) / segmentLength) % 2 === 0;
-
-            // Дорожное полотно (чередующиеся цвета)
-            const roadColor = isEven ? 0x2d3436 : 0x353b48;
-            const roadGeom = new THREE.BoxGeometry(12, 0.2, segmentLength);
-            const roadMat = new THREE.MeshLambertMaterial({ color: roadColor });
+            const group = new THREE.Group();
+            
+            // Трасса с SVG текстурой
+            const roadGeom = new THREE.BoxGeometry(10, 0.2, segmentLength);
             const road = new THREE.Mesh(roadGeom, roadMat);
             road.position.set(0, -0.1, z - segmentLength / 2);
-            segmentGroup.add(road);
+            group.add(road);
 
-            // Обочины (зеленый крафт-газон)
-            const sideColor = isEven ? 0x26de81 : 0x20bf6b;
-            const sideMat = new THREE.MeshLambertMaterial({ color: sideColor });
-            const sideGeom = new THREE.BoxGeometry(30, 0.1, segmentLength);
-            
-            const leftSide = new THREE.Mesh(sideGeom, sideMat);
-            leftSide.position.set(-21, -0.15, z - segmentLength / 2);
-            segmentGroup.add(leftSide);
+            // Обочина
+            const grassGeom = new THREE.BoxGeometry(25, 0.1, segmentLength);
+            const grassMat = new THREE.MeshLambertMaterial({ color: 0x1e824c });
+            const grassL = new THREE.Mesh(grassGeom, grassMat);
+            grassL.position.set(-17.5, -0.15, z - segmentLength / 2);
+            const grassR = grassL.clone();
+            grassR.position.x = 17.5;
+            group.add(grassL, grassR);
 
-            const rightSide = new THREE.Mesh(sideGeom, sideMat);
-            rightSide.position.set(21, -0.15, z - segmentLength / 2);
-            segmentGroup.add(rightSide);
-
-            // Бордюрная разметка (красно-белая классика)
-            const curbColor = isEven ? 0xffffff : 0xfc5c65;
-            const curbMat = new THREE.MeshLambertMaterial({ color: curbColor });
-            const curbGeom = new THREE.BoxGeometry(0.4, 0.3, segmentLength);
-            
-            const leftCurb = new THREE.Mesh(curbGeom, curbMat);
-            leftCurb.position.set(-6.2, 0.1, z - segmentLength / 2);
-            segmentGroup.add(leftCurb);
-
-            const rightCurb = new THREE.Mesh(curbGeom, curbMat);
-            rightCurb.position.set(6.2, 0.1, z - segmentLength / 2);
-            segmentGroup.add(rightCurb);
-
-            // Майнкрафт-деревья по бокам дороги
-            if (Math.random() > 0.3) createBlockTree(segmentGroup, -9 - Math.random() * 5, z - Math.random() * segmentLength);
-            if (Math.random() > 0.3) createBlockTree(segmentGroup, 9 + Math.random() * 5, z - Math.random() * segmentLength);
-
-            // Генерация препятствий на трассе
-            if (Math.abs(z) > 50 && Math.random() > 0.6) {
-                const obsX = (Math.random() - 0.5) * 9.5;
-                const obsZ = z - Math.random() * segmentLength;
-                createObstacle(segmentGroup, obsX, obsZ);
+            // Редкие деревья из блоков
+            if (Math.random() > 0.6) {
+                const tree = new THREE.Group();
+                const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2, 0.5), new THREE.MeshLambertMaterial({color: 0x5c4033}));
+                trunk.position.y = 1;
+                const leaves = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshLambertMaterial({color: 0x2e7d32}));
+                leaves.position.y = 2.5;
+                tree.add(trunk, leaves);
+                tree.position.set(Math.random() > 0.5 ? 7 : -7, 0, z - Math.random() * segmentLength);
+                group.add(tree);
             }
 
-            scene.add(segmentGroup);
-            segments.push({ z: z, mesh: segmentGroup });
+            // Спавн редких встречных машин
+            if (Math.abs(z) > 60 && Math.random() > 0.82) {
+                spawnTrafficCar(z - segmentLength / 2);
+            }
+
+            scene.add(group);
+            segments.push({ z: z, mesh: group });
         }
 
-        function createBlockTree(group, x, z) {
-            const tree = new THREE.Group();
+        function spawnTrafficCar(z) {
+            const tCar = new THREE.Group();
+            const tBody = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 2.8), trafficMat);
+            tBody.position.y = 0.4;
+            tCar.add(tBody);
+
+            const tCabin = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 1.3), new THREE.MeshLambertMaterial({color: 0x222222}));
+            tCabin.position.set(0, 0.9, 0.1);
+            tCar.add(tCabin);
+
+            tCar.position.set((Math.random() - 0.5) * 7.5, 0, z);
             
-            // Коричневый ствол
-            const trunkGeom = new THREE.BoxGeometry(0.6, 2.4, 0.6);
-            const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
-            const trunk = new THREE.Mesh(trunkGeom, trunkMat);
-            trunk.position.y = 1.2;
-            tree.add(trunk);
+            // Внутренние параметры движения бота
+            tCar.userData = { speed: 0.15 + Math.random() * 0.1 }; 
 
-            // Зеленая квадратная листва
-            const leavesGeom = new THREE.BoxGeometry(2, 2, 2);
-            const leavesMat = new THREE.MeshLambertMaterial({ color: 0x26af61 });
-            const leaves = new THREE.Mesh(leavesGeom, leavesMat);
-            leaves.position.y = 2.8;
-            tree.add(leaves);
-
-            tree.position.set(x, 0, z);
-            group.add(tree);
+            scene.add(tCar);
+            traffic.push(tCar);
         }
 
-        function createObstacle(group, x, z) {
-            const obsGeom = new THREE.BoxGeometry(1.4, 1.2, 1.4);
-            const obsMat = new THREE.MeshLambertMaterial({ color: 0xd35400 }); // Оранжевый воксельный блок
-            const obs = new THREE.Mesh(obsGeom, obsMat);
-            obs.position.set(x, 0.6, z);
-            group.add(obs);
-            
-            obstacles.push({ x: x, z: z, mesh: obs });
-        }
-
-        function updateTrack() {
-            // Генерируем чанки вперед по ходу движения игрока
+        function updateWorld() {
             while (lastSegmentZ > car.position.z - maxSegments * segmentLength) {
                 createSegment(lastSegmentZ);
                 lastSegmentZ -= segmentLength;
             }
 
-            // Очищаем старые чанки сзади для оптимизации
+            // Удаление старых сегментов дороги
             for (let i = segments.length - 1; i >= 0; i--) {
-                if (segments[i].z > car.position.z + 15) {
+                if (segments[i].z > car.position.z + 20) {
                     scene.remove(segments[i].mesh);
-                    const deletedZ = segments[i].z;
-                    
-                    // Удаляем отработавшие препятствия
-                    for (let j = obstacles.length - 1; j >= 0; j--) {
-                        if (obstacles[j].z <= deletedZ && obstacles[j].z > deletedZ - segmentLength) {
-                            obstacles.splice(j, 1);
-                        }
-                    }
                     segments.splice(i, 1);
                 }
             }
-        }
 
-        // --- УПРАВЛЕНИЕ КЛАВИАТУРОЙ ---
-        const handler = (e, status) => {
-            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.Forward = status;
-            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.Backward = status;
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.Left = status;
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.Right = status;
-        };
-        window.addEventListener('keydown', (e) => handler(e, true));
-        window.addEventListener('keyup', (e) => handler(e, false));
+            // Обновление и чистка машин трафика
+            for (let i = traffic.length - 1; i >= 0; i--) {
+                const tCar = traffic[i];
+                tCar.position.z += tCar.userData.speed; // Машины едут навстречу игроку
 
-        // --- ПРОВЕРКА СТОЛКНОВЕНИЙ ---
-        function checkCollisions() {
-            for (let i = 0; i < obstacles.length; i++) {
-                const obs = obstacles[i];
-                const distX = Math.abs(car.position.x - obs.x);
-                const distZ = Math.abs(car.position.z - obs.z);
-
-                // Если габариты пересеклись — отлетаем назад
-                if (distX < 1.5 && distZ < 2.2) {
-                    speed = -0.3; 
-                    document.getElementById('ui').style.color = '#ff4d4d'; // Мигание интерфейса при ударе
-                    setTimeout(() => { document.getElementById('ui').style.color = '#fff'; }, 150);
+                // Удаляем, если осталась далеко позади
+                if (tCar.position.z > car.position.z + 20) {
+                    scene.remove(tCar);
+                    traffic.splice(i, 1);
                 }
             }
         }
 
-        // --- ИГРОВОЙ ЦИКЛ (ИЗМЕНЕНИЯ КАЖДЫЙ КАДР) ---
+        // --- ИГРОВОЙ ЦИКЛ ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // Разгон и торможение
-            if (keys.Forward) speed = Math.min(speed + accel, maxSpeed);
-            else if (keys.Backward) speed = Math.max(speed - accel, -maxSpeed / 2);
-            else {
-                if (speed > 0) speed = Math.max(0, speed - deccel);
-                if (speed < 0) speed = Math.min(0, speed + deccel);
+            if (isPlaying) {
+                // Движение вперед и торможение (Без отрицательной скорости!)
+                if (keys.Forward) speed = Math.min(speed + accel, maxSpeed);
+                else if (keys.Brake) speed = Math.max(0, speed - deccel * 2); // Эффективное торможение
+                else speed = Math.max(0, speed - deccel);
+
+                // Повороты
+                if (keys.Left && speed > 0.05) carX -= 0.08 * (speed / maxSpeed);
+                if (keys.Right && speed > 0.05) carX += 0.08 * (speed / maxSpeed);
+
+                // Ограничители трассы
+                if (carX < -4.3) { carX = -4.3; speed *= 0.98; }
+                if (carX > 4.3) { carX = 4.3; speed *= 0.98; }
+
+                car.position.z -= speed;
+                car.position.x = carX;
+
+                // Вращение колес игрока
+                wheels.forEach(w => w.rotation.x -= speed);
+
+                // Динамическая тональность мотора на основе скорости
+                if (engineOsc) {
+                    engineOsc.frequency.setValueAtTime(30 + speed * 120, audioCtx.currentTime);
+                }
+
+                // Проверка столкновений (Хитбокс)
+                traffic.forEach(tCar => {
+                    const dX = Math.abs(car.position.x - tCar.position.x);
+                    const dZ = Math.abs(car.position.z - tCar.position.z);
+                    if (dX < 1.4 && dZ < 2.8) {
+                        gameOver();
+                    }
+                });
+
+                updateWorld();
+
+                // Обновление UI
+                document.getElementById('speed').innerText = Math.round(speed * 240);
+                document.getElementById('distance').innerText = Math.round(Math.abs(car.position.z));
             }
 
-            // Повороты руля (только в движении)
-            if (keys.Left && Math.abs(speed) > 0.05) carX -= 0.11 * (speed / maxSpeed);
-            if (keys.Right && Math.abs(speed) > 0.05) carX += 0.11 * (speed / maxSpeed);
-
-            // Ограничение съезда в кювет
-            if (carX < -5.4) { carX = -5.4; speed *= 0.96; }
-            if (carX > 5.4) { carX = 5.4; speed *= 0.96; }
-
-            // Обновление позиций
-            car.position.z -= speed; // Движение вперед по оси Z
-            car.position.x = carX;
-
-            // Вращение колес в такт скорости
-            wheels.forEach(w => w.rotation.x -= speed);
-
-            // Эффект ретро-наклона кузова на поворотах
-            if (keys.Left && speed > 0.1) car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, 0.07, 0.1);
-            else if (keys.Right && speed > 0.1) car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -0.07, 0.1);
-            else car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, 0, 0.1);
-
-            // Камера плавно следует позади машинки
-            camera.position.set(car.position.x * 0.65, 4.3, car.position.z + 7.5);
-            camera.lookAt(car.position.x, 1.1, car.position.z - 5);
-
-            // Логика мира
-            updateTrack();
-            checkCollisions();
-
-            // Рендеринг интерфейса
-            document.getElementById('speed').innerText = Math.round(Math.max(0, speed * 160));
-            document.getElementById('distance').innerText = Math.round(Math.abs(car.position.z));
+            // Плавное следование камеры
+            camera.position.set(car.position.x * 0.7, 3.8, car.position.z + 6.5);
+            camera.lookAt(car.position.x, 0.8, car.position.z - 4);
 
             renderer.render(scene, camera);
         }
 
-        // Поддержка изменения размеров окна
+        // --- СОСТОЯНИЯ ИГРЫ ---
+        function startGame() {
+            initAudio();
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            isPlaying = true;
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            playCrashSound();
+            if (engineOsc) engineOsc.frequency.setValueAtTime(0, audioCtx.currentTime);
+            document.getElementById('ui').style.display = 'none';
+            document.getElementById('final-score').innerText = `Вы проехали: ${Math.round(Math.abs(car.position.z))} метров`;
+            document.getElementById('game-over-screen').style.display = 'flex';
+        }
+
+        function restartGame() {
+            // Сброс параметров
+            speed = 0;
+            carX = 0;
+            car.position.set(0, 0, 0);
+            
+            // Очистка трафика
+            traffic.forEach(tCar => scene.remove(tCar));
+            traffic = [];
+
+            // Очистка сегментов трассы
+            segments.forEach(s => scene.remove(s.mesh));
+            segments = [];
+            lastSegmentZ = 0;
+
+            document.getElementById('game-over-screen').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            isPlaying = true;
+        }
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Старт игры
+        // Запуск основного цикла рендеринга
         animate();
     </script>
 </body>
