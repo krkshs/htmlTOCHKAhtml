@@ -43,6 +43,15 @@
             color: #e2d69a; font-size: 1.1rem; pointer-events: none; display: none;
             text-shadow: 1px 1px 2px #000;
         }
+        
+        /* ЛЕВЫЙ НИЖНИЙ БЛОК: Данные сервера */
+        #server-info {
+            position: absolute; bottom: 20px; left: 20px; z-index: 5;
+            color: #eedc82; font-size: 0.85rem; pointer-events: none; display: none;
+            text-shadow: 1px 1px 2px #000; background: rgba(21, 20, 11, 0.7);
+            padding: 8px 12px; border-radius: 4px; border: 1px solid rgba(238, 220, 130, 0.2);
+        }
+
         #crosshair {
             position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
             background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%);
@@ -78,6 +87,12 @@
         <div id="online-count">В игре: 1</div>
     </div>
 
+    <div id="server-info">
+        TARGET ADDR: <span id="srv-ip">127.0.0.1</span><br>
+        TARGET PORT: <span id="srv-port">3000</span><br>
+        STATUS: <span id="srv-status" style="color: #6c5;">CONNECTING</span>
+    </div>
+
     <div id="crosshair"></div>
     <div id="instructions">WASD — Ходить | Shift — Бег | F — Фонарик | Клик по экрану активирует мышь</div>
     <div id="jumpscare">ВЫ ПОЙМАНЫ</div>
@@ -85,6 +100,14 @@
     <div id="canvas-container"></div>
 
     <script>
+        // ========================================================
+        // НАСТРОЙКИ СЕРВЕРА ДЛЯ ТЕБЯ
+        // ========================================================
+        const USE_NODE_SERVER = false;        // Поставь true, когда мы создадим Node.js бэкенд
+        const SERVER_IP = "127.0.0.1";        // Сюда впишешь IP или домен хостинга (например, от Render)
+        const SERVER_PORT = "3000";           // Сюда порт сервера
+        // ========================================================
+
         const CELL_SIZE = 4;
         const CHUNK_RADIUS = 9;
         const SPEED_WALK = 3.2;
@@ -95,29 +118,24 @@
         let myName = "Игрок";
         let isPlaying = false;
 
-        // Движение и углы обзора
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isSprinting = false;
         let yaw = 0, pitch = 0;
         const playerPos = new THREE.Vector3(0, 1.5, 0); 
         let playerVelocity = new THREE.Vector3();
 
-        let flashlight, mqttClient;
+        let flashlight, mqttClient, wsClient;
         const spawnedWalls = new Map();
         const remotePlayers = new Map();
         let monsterMesh;
         let monsterSpeed = 2.4;
 
-        // Текстуры в точности как на скрине
         let wallTexture, carpetTexture, ceilingTexture;
 
         function generateExactTextures() {
-            // 1. Обои (Желтые с наслоенными дугами/арками)
             const canvasWall = document.createElement('canvas');
             canvasWall.width = 256; canvasWall.height = 256;
             const ctxWall = canvasWall.getContext('2d');
             ctxWall.fillStyle = '#cfbe73'; ctxWall.fillRect(0,0,256,256);
-            
-            // Рисуем узоры арок
             ctxWall.strokeStyle = '#a69a63'; ctxWall.lineWidth = 1.5;
             for(let x=0; x<=256; x+=32) {
                 for(let y=-16; y<=272; y+=24) {
@@ -129,7 +147,6 @@
             wallTexture = new THREE.CanvasTexture(canvasWall);
             wallTexture.wrapS = THREE.RepeatWrapping; wallTexture.wrapT = THREE.RepeatWrapping;
 
-            // 2. Ковер (Грязный болотный ворс)
             const canvasCarpet = document.createElement('canvas');
             canvasCarpet.width = 128; canvasCarpet.height = 128;
             const ctxCarpet = canvasCarpet.getContext('2d');
@@ -142,7 +159,6 @@
             carpetTexture.wrapS = THREE.RepeatWrapping; carpetTexture.wrapT = THREE.RepeatWrapping;
             carpetTexture.repeat.set(2, 2);
 
-            // 3. Потолок
             const canvasCeil = document.createElement('canvas');
             canvasCeil.width = 128; canvasCeil.height = 128;
             const ctxCeil = canvasCeil.getContext('2d');
@@ -152,15 +168,14 @@
             ceilingTexture.wrapS = THREE.RepeatWrapping; ceilingTexture.wrapT = THREE.RepeatWrapping;
         }
 
-        // Карта лабиринта
         function checkStructure(cx, cz) {
-            if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) return false; // Спавн свободен
+            if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) return false;
             let n1 = Math.sin(cx * 0.5) * Math.cos(cz * 0.5);
             let n2 = Math.cos(cx * 0.2) * Math.sin(cz * 0.2);
             let isWall = false;
             if (Math.abs(cx) % 5 === 0 && n1 > -0.3) isWall = true;
             if (Math.abs(cz) % 5 === 0 && n2 > -0.3) isWall = true;
-            if (isWall && Math.sin(cx * 5.1 + cz * 9.2) > 0.3) isWall = false; // Проходы
+            if (isWall && Math.sin(cx * 5.1 + cz * 9.2) > 0.3) isWall = false;
             return isWall;
         }
 
@@ -170,21 +185,16 @@
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color('#222013');
-            // Желтовато-зеленый туман для точной атмосферы
             scene.fog = new THREE.FogExp2('#222013', 0.08); 
 
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
             camera.position.copy(playerPos);
-            
-            // ВАЖНО: Фикс дикого вращения камеры на 360 градусов!
             camera.rotation.order = 'YXZ'; 
             scene.add(camera);
 
-            // Флуоресцентное общее освещение
             const ambientLight = new THREE.AmbientLight('#a39d6c', 0.8);
             scene.add(ambientLight);
 
-            // Фонарик на F
             flashlight = new THREE.SpotLight('#fffbd6', 2.5, 20, Math.PI / 4.5, 0.6, 1.2);
             camera.add(flashlight);
             camera.add(flashlight.target);
@@ -206,7 +216,6 @@
             createScaryMonster();
         }
 
-        // Бесконечный рендеринг блоков вокруг игрока
         function updateChunks() {
             let pGridX = Math.floor(playerPos.x / CELL_SIZE);
             let pGridZ = Math.floor(playerPos.z / CELL_SIZE);
@@ -264,7 +273,6 @@
             }
         }
 
-        // Физика столкновений (Коллизии)
         function checkCollision(targetPos) {
             let radius = 0.35;
             let points = [
@@ -279,18 +287,15 @@
             return false;
         }
 
-        // Создание ОДНОГО самого страшного аморфного монстра (Бактерия/Провода)
         function createScaryMonster() {
             const group = new THREE.Group();
             const mat = new THREE.MeshBasicMaterial({ color: '#030303' });
             
-            // Тонкое вытянутое хаотичное тело из палок
             const spineGeo = new THREE.CylinderGeometry(0.04, 0.04, 2.4);
             const spine = new THREE.Mesh(spineGeo, mat);
             spine.position.y = 1.2;
             group.add(spine);
 
-            // Крючковатые длинные конечности
             for(let i = 0; i < 4; i++) {
                 const limbGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.6);
                 const limb = new THREE.Mesh(limbGeo, mat);
@@ -300,7 +305,6 @@
             }
 
             monsterMesh = group;
-            // Спавним его подальше в глубине лабиринта
             monsterMesh.position.set(24, 0, 24);
             scene.add(monsterMesh);
         }
@@ -311,7 +315,6 @@
             dir.y = 0;
             let dist = dir.length();
 
-            // Монстр активируется только если игрок забрел в его зону (редкие скримеры)
             if (dist < 30) {
                 dir.normalize();
                 let nextPos = monsterMesh.position.clone().addScaledVector(dir, monsterSpeed * delta);
@@ -323,7 +326,6 @@
 
                 if (dist < 0.7) triggerJumpscare();
             } else {
-                // Если далеко — медленно блуждает кругами
                 monsterMesh.position.x += Math.sin(clock.getElapsedTime() * 0.2) * 0.01;
             }
         }
@@ -342,43 +344,46 @@
             }, 2000);
         }
 
-        // --- Глобальный Интернет Мультиплеер через бесплатный MQTT сервер ---
+        // Рендер чужих игроков-капсул
+        function syncRemotePlayer(data) {
+            if (data.id === myId) return;
+            if (!remotePlayers.has(data.id)) {
+                const capGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.6, 8);
+                const capMat = new THREE.MeshStandardMaterial({ color: '#900000', roughness: 0.5 });
+                const mesh = new THREE.Mesh(capGeo, capMat);
+                scene.add(mesh);
+                remotePlayers.set(data.id, { mesh: mesh, lastSeen: Date.now() });
+            } else {
+                let rData = remotePlayers.get(data.id);
+                rData.mesh.position.set(data.x, data.y - 0.4, data.z);
+                rData.lastSeen = Date.now();
+            }
+        }
+
+        // --- ВАРИАНТ 1: Глобальный MQTT (Дефолт) ---
         function initGlobalMultiplayer() {
-            // Подключаемся к бесплатному глобальному брокеру HiveMQ через защищенные веб-сокеты
+            document.getElementById('srv-ip').innerText = "HiveMQ Broker";
+            document.getElementById('srv-port = ""').innerText = "WSS (Public)";
+            
             const brokerUri = "wss://broker.hivemq.com:8884/mqtt"; 
             mqttClient = new Paho.MQTT.Client(brokerUri, "sub_back_" + Math.random().toString(36).substr(2, 5));
 
             mqttClient.onMessageArrived = (message) => {
                 try {
                     let data = JSON.parse(message.payloadString);
-                    if (data.id === myId) return;
-
-                    if (data.type === 'move') {
-                        if (!remotePlayers.has(data.id)) {
-                            // Создаем игрока в виде КАПСУЛЫ
-                            const capGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.6, 8);
-                            const capMat = new THREE.MeshStandardMaterial({ color: '#900000', roughness: 0.5 }); // Бордовые капсулы коллег
-                            const mesh = new THREE.Mesh(capGeo, capMat);
-                            scene.add(mesh);
-                            remotePlayers.set(data.id, { mesh: mesh, lastSeen: Date.now() });
-                        } else {
-                            let rData = remotePlayers.get(data.id);
-                            rData.mesh.position.set(data.x, data.y - 0.4, data.z);
-                            rData.lastSeen = Date.now();
-                        }
-                    }
+                    syncRemotePlayer(data);
                 } catch(e){}
             };
 
             mqttClient.connect({
                 onSuccess: () => {
+                    document.getElementById('srv-status').innerText = "CONNECTED (MQTT)";
+                    document.getElementById('srv-status').style.color = "#6c5";
                     mqttClient.subscribe("backrooms/level0/global_game_v2");
-                    // Каждые 50мс шлем свои координаты в глобальный интернет
                     setInterval(() => {
                         if (!isPlaying) return;
                         let msg = new Paho.MQTT.Message(JSON.stringify({
-                            type: 'move', id: myId, name: myName,
-                            x: playerPos.x, y: playerPos.y, z: playerPos.z
+                            type: 'move', id: myId, name: myName, x: playerPos.x, y: playerPos.y, z: playerPos.z
                         }));
                         msg.destinationName = "backrooms/level0/global_game_v2";
                         mqttClient.send(msg);
@@ -386,21 +391,63 @@
                 },
                 useSSL: true
             });
-
-            // Очистка игроков, которые вышли
-            setInterval(() => {
-                let now = Date.now();
-                for (let [id, data] of remotePlayers.entries()) {
-                    if (now - data.lastSeen > 3000) {
-                        scene.remove(data.mesh);
-                        remotePlayers.delete(id);
-                    }
-                }
-                document.getElementById('online-count').innerText = "В игре: " + (remotePlayers.size + 1);
-            }, 2000);
         }
 
-        // Синтез страшного гула ламп (Web Audio API)
+        // --- ВАРИАНТ 2: Твой будущий Node.js Сервер через WebSockets ---
+        function initNodeServer() {
+            document.getElementById('srv-ip').innerText = SERVER_IP;
+            document.getElementById('srv-port').innerText = SERVER_PORT;
+            document.getElementById('srv-status').innerText = "CONNECTING...";
+            document.getElementById('srv-status').style.color = "#eedc82";
+
+            const url = (SERVER_IP.startsWith('http') || SERVER_IP.includes('render')) 
+                ? `wss://${SERVER_IP.replace('https://','').replace('http://','')}` 
+                : `ws://${SERVER_IP}:${SERVER_PORT}`;
+
+            wsClient = new WebSocket(url);
+
+            wsClient.onopen = () => {
+                document.getElementById('srv-status').innerText = "ONLINE (NODE)";
+                document.getElementById('srv-status').style.color = "#6c5";
+                
+                setInterval(() => {
+                    if (wsClient.readyState === WebSocket.OPEN && isPlaying) {
+                        wsClient.send(JSON.stringify({
+                            type: 'move', id: myId, name: myName, x: playerPos.x, y: playerPos.y, z: playerPos.z
+                        }));
+                    }
+                }, 50);
+            };
+
+            wsClient.onmessage = (event) => {
+                try {
+                    let data = JSON.parse(event.data);
+                    if(Array.isArray(data)) {
+                        data.forEach(p => syncRemotePlayer(p));
+                    } else {
+                        syncRemotePlayer(data);
+                    }
+                } catch(e){}
+            };
+
+            wsClient.onerror = () => {
+                document.getElementById('srv-status').innerText = "ERR / OFFLINE";
+                document.getElementById('srv-status').style.color = "#ff4d4d";
+            };
+        }
+
+        // Очистка неактивных игроков
+        setInterval(() => {
+            let now = Date.now();
+            for (let [id, data] of remotePlayers.entries()) {
+                if (now - data.lastSeen > 3000) {
+                    scene.remove(data.mesh);
+                    remotePlayers.delete(id);
+                }
+            }
+            document.getElementById('online-count').innerText = "В игре: " + (remotePlayers.size + 1);
+        }, 2000);
+
         function startAmbientSound() {
             try {
                 let ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -409,13 +456,12 @@
                 let filter = ctx.createBiquadFilter();
                 osc.type = 'sawtooth'; osc.frequency.setValueAtTime(55, ctx.currentTime);
                 filter.type = 'lowpass'; filter.frequency.setValueAtTime(120, ctx.currentTime);
-                gain.gain.setValueAtTime(0.03, ctx.currentTime); // Тихий монотонный гул
+                gain.gain.setValueAtTime(0.03, ctx.currentTime);
                 osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
                 osc.start();
             }catch(e){}
         }
 
-        // --- Управление ---
         function onKeyDown(e) {
             if(!isPlaying) return;
             if (e.code === 'KeyW') moveForward = true;
@@ -436,13 +482,9 @@
 
         function onMouseMove(e) {
             if (document.pointerLockElement !== document.body) return;
-            
             yaw -= e.movementX * 0.0022;
             pitch -= e.movementY * 0.0022;
-            
-            // Строгий зажим углов, чтобы камера не переворачивалась на 360 по вертикали
             pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch));
-            
             camera.rotation.y = yaw;
             camera.rotation.x = pitch;
         }
@@ -459,6 +501,7 @@
             document.getElementById('player-name').innerText = "Игрок: " + myName;
             document.getElementById('menu').style.display = 'none';
             document.getElementById('hud').style.display = 'block';
+            document.getElementById('server-info').style.display = 'block'; // Показываем IP блок
             document.getElementById('crosshair').style.display = 'block';
             document.getElementById('instructions').style.display = 'block';
             
@@ -466,10 +509,15 @@
             document.body.requestPointerLock();
             
             startAmbientSound();
-            initGlobalMultiplayer();
+            
+            // Проверка: какой бэкенд использовать
+            if (USE_NODE_SERVER) {
+                initNodeServer();
+            } else {
+                initGlobalMultiplayer();
+            }
         });
 
-        // --- Главный игровой цикл ---
         function animate() {
             requestAnimationFrame(animate);
             let delta = clock.getDelta();
