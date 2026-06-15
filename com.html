@@ -1,993 +1,714 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Тёмный Коридор — 3D (FIXED)</title>
-<style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-        background: #000;
-        overflow: hidden;
-        font-family: 'Courier New', monospace;
-        color: #e0e0e0;
-        cursor: none;
-    }
-    canvas {
-        display: block;
-        position: fixed;
-        top: 0; left: 0;
-        z-index: 1;
-    }
-    #crosshair {
-        position: fixed;
-        top: 50%; left: 50%;
-        width: 4px; height: 4px;
-        background: rgba(255,255,255,0.7);
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        z-index: 100;
-    }
-    #crosshair::before, #crosshair::after {
-        content: '';
-        position: absolute;
-        background: rgba(255,255,255,0.7);
-    }
-    #crosshair::before { width: 14px; height: 1px; top: 1px; left: -5px; }
-    #crosshair::after { width: 1px; height: 14px; top: -5px; left: 1px; }
-    #dialog {
-        position: fixed;
-        bottom: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.85);
-        padding: 18px 28px;
-        border: 2px solid #666;
-        font-size: 16px;
-        max-width: 720px;
-        display: none;
-        z-index: 150;
-        line-height: 1.5;
-        text-align: center;
-    }
-    #hint {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #aaa;
-        font-size: 13px;
-        letter-spacing: 1px;
-        z-index: 150;
-        text-align: center;
-        background: rgba(0,0,0,0.5);
-        padding: 8px 16px;
-        border: 1px solid #444;
-        pointer-events: none;
-    }
-    #interactionHint {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, 80px);
-        color: #fff;
-        font-size: 14px;
-        background: rgba(0,0,0,0.7);
-        padding: 6px 14px;
-        border: 1px solid #888;
-        z-index: 140;
-        display: none;
-        pointer-events: none;
-    }
-    #lockStatus {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        color: #ff5555;
-        font-size: 12px;
-        background: rgba(0,0,0,0.7);
-        padding: 6px 12px;
-        border: 1px solid #555;
-        z-index: 160;
-        pointer-events: none;
-    }
-    #lockScreen {
-        position: fixed;
-        inset: 0;
-        background: #000;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 200;
-        cursor: pointer;
-    }
-    #lockScreen h1 {
-        font-size: 42px;
-        margin-bottom: 20px;
-        color: #b8860b;
-        letter-spacing: 3px;
-    }
-    #lockScreen p { font-size: 16px; color: #888; margin: 8px 0; }
-    #lockScreen .small { margin-top: 30px; color: #555; font-size: 13px; }
-    #endScreen {
-        position: fixed;
-        inset: 0;
-        background: #b8860b;
-        display: none;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        z-index: 250;
-        color: #2a1a0a;
-        font-size: 22px;
-        text-align: center;
-        line-height: 1.8;
-    }
-    #endScreen .icon { font-size: 72px; margin-bottom: 30px; }
-    #endScreen .sub { margin-top: 40px; font-size: 14px; opacity: 0.6; }
-    @keyframes flicker {
-        0%, 100% { opacity: 1; }
-        25% { opacity: 0.3; }
-        50% { opacity: 0.85; }
-        75% { opacity: 0.2; }
-    }
-    .flicker { animation: flicker 0.2s infinite; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Backrooms: Lost in JavaScript</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Эффект VHS помех */
+        #vhs-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        /* Главное меню */
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1a1913;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            color: #d1c28a;
+            text-align: center;
+        }
+
+        #menu h1 {
+            font-size: 3rem;
+            margin-bottom: 5px;
+            letter-spacing: 5px;
+            color: #f1e4a3;
+            text-shadow: 3px 3px 0px #000;
+        }
+
+        #menu p {
+            font-size: 1rem;
+            margin-bottom: 30px;
+            color: #8a8158;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        #nickname-input {
+            background: #2b291f;
+            border: 2px solid #54503d;
+            padding: 12px 20px;
+            font-size: 1.2rem;
+            color: #fff;
+            outline: none;
+            text-align: center;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        #nickname-input:focus {
+            border-color: #d1c28a;
+        }
+
+        #start-btn {
+            background: #d1c28a;
+            color: #1a1913;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-family: inherit;
+            box-shadow: 0 4px 0px #8a8158;
+        }
+
+        #start-btn:hover {
+            background: #f1e4a3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0px #8a8158;
+        }
+
+        #start-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0px #8a8158;
+        }
+
+        /* Интерфейс внутри игры */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 5;
+            color: #e2d69a;
+            font-size: 1rem;
+            pointer-events: none;
+            display: none;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            pointer-events: none;
+            display: none;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(217, 201, 131, 0.6);
+            font-size: 0.9rem;
+            z-index: 5;
+            pointer-events: none;
+            text-align: center;
+            display: none;
+        }
+
+        /* Скример */
+        #jumpscare {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: red;
+            font-size: 5rem;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-<div id="lockScreen">
-    <h1>ТЁМНЫЙ КОРИДОР</h1>
-    <p>WASD — движение &nbsp;|&nbsp; МЫШЬ — обзор</p>
-    <p>F — фонарик &nbsp;|&nbsp; E — взаимодействие</p>
-    <p class="small">[Кликните в любом месте для начала]</p>
-    <p class="small">[Если мышь не захватывается — используйте СТРЕЛКИ для обзора]</p>
-</div>
+    <div id="vhs-overlay"></div>
 
-<div id="crosshair"></div>
-<div id="hint">WASD — движение | МЫШЬ/СТРЕЛКИ — обзор | F — фонарик | E — взаимодействие</div>
-<div id="interactionHint"></div>
-<div id="dialog"></div>
-<div id="lockStatus">Мышь: не захвачена (СТРЕЛКИ для обзора)</div>
+    <div id="menu">
+        <h1>THE BACKROOMS</h1>
+        <p>Уровень 0 • Бесконечный архив монотонности</p>
+        <div class="input-group">
+            <input type="text" id="nickname-input" placeholder="Введите ваш ник" maxlength="12" value="Игрок">
+        </div>
+        <button id="start-btn">ПРОДОЛЖИТЬ</button>
+    </div>
 
-<div id="endScreen">
-    <div class="icon">☠</div>
-    <div>Ты сел на второй стул.</div>
-    <div>Рядом с ванякеком.</div>
-    <div class="sub">Жёлтая комната теперь твоя. Навсегда.</div>
-</div>
+    <div id="hud">
+        <div id="player-name">Игрок: Unknown</div>
+        <div id="online-count">В сети на этой машине: 1</div>
+    </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
+    <div id="crosshair"></div>
+    <div id="instructions">WASD — Движение | SHIFT — Бег | F — Фонарик | Мышь — Обзор (Клик для захвата)</div>
+    
+    <div id="jumpscare">ВЫ ПОЙМАНЫ</div>
+    <div id="canvas-container"></div>
 
-<script>
-/* =========================================================================
-   Состояние игры — единый источник истины
-   ========================================================================= */
-const Game = {
-    scene: null,
-    renderer: null,
-    camera: null,
-    controls: null,
-    clock: new THREE.Clock(),
-    
-    player: {
-        position: new THREE.Vector3(0, 1.7, 0),
-        speed: 4.0,
-        yaw: 0,   // для fallback-управления мышью/стрелками
-        pitch: 0
-    },
-    
-    flashlightOn: false,
-    location: 'corridor',
-    doorOpened: false,
-    dialogActive: false,
-    dialogStep: 0,
-    gameEnded: false,
-    pointerLocked: false,
-    
-    keys: {},
-    flashlight: null,
-    raycaster: new THREE.Raycaster(),
-    interactables: [],
-    
-    DOOR_POS: new THREE.Vector3(0, 1.5, -48),
-    VANYAKEK_POS: new THREE.Vector3(0, 0.8, -3)
-};
+    <script>
+        // --- Настройки игры ---
+        const CELL_SIZE = 4; // Размер одного блока лабиринта в метрах
+        const CHUNK_RADIUS = 8; // Радиус прорисовки блоков вокруг игрока
+        const SPEED_WALK = 3.5;
+        const SPEED_SPRINT = 6.0;
+        
+        let scene, camera, renderer, clock;
+        let myId = '_' + Math.random().toString(36).substr(2, 9);
+        let myName = "Игрок";
+        let isPlaying = false;
 
-const DIALOGUES = [
-    { text: "*тишина... только слабое потрескивание лампы*", delay: 2500 },
-    { text: "Ты... кто? Ваня? Это ты?", delay: 2500 },
-    { text: "*голова ванякека медленно поднимается*", delay: 2000, action: 'lift_head' },
-    { text: "Наконец-то... я так долго ждал.", delay: 3000 },
-    { text: "Помнишь тот коридор? Мы всегда обещали пройти его вместе до конца...", delay: 3500 },
-    { text: "Но я дошёл один. И теперь я здесь. В этой жёлтой комнате.", delay: 3500 },
-    { text: "Знаешь, почему комната жёлтая?", delay: 2500 },
-    { text: "Потому что жёлтый — цвет ожидания. Цвет одиночества.", delay: 3500 },
-    { text: "*его глаза медленно открываются — они абсолютно белые*", delay: 2500, action: 'open_eyes' },
-    { text: "И я больше никогда не буду один.", delay: 3000 },
-    { text: "Садись. Рядом. Здесь есть второй стул...", delay: 3000 },
-    { text: "...правда?", delay: 2500 }
-];
+        // Физика и управление
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isSprinting = false;
+        let yaw = 0, pitch = 0;
+        const playerPos = new THREE.Vector3(0, 1.6, 0); // Спавн в центре (0,0)
+        let playerVelocity = new THREE.Vector3();
+        let flashlight, ambientBuzz;
+        
+        // Списки объектов
+        const spawnedWalls = new Map(); // Кэш чанков стен key -> mesh
+        const remotePlayers = new Map(); // Другие игроки (капсулы)
+        const monsters = [];
 
-/* =========================================================================
-   TEXTURE FACTORY — воксельные текстуры
-   ========================================================================= */
-const TextureFactory = (() => {
-    function createPixelTexture(spec) {
-        const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 16;
-        const ctx = canvas.getContext('2d');
-        
-        ctx.fillStyle = spec.base;
-        ctx.fillRect(0, 0, 16, 16);
-        
-        if (spec.variants) {
-            spec.variants.forEach(v => {
-                ctx.fillStyle = v.color;
-                v.pixels.forEach(([x, y, w, h]) => ctx.fillRect(x, y, w || 1, h || 1));
-            });
-        }
-        
-        if (spec.border) {
-            ctx.fillStyle = spec.border;
-            ctx.fillRect(0, 0, 16, 1);
-            ctx.fillRect(0, 15, 16, 1);
-            ctx.fillRect(0, 0, 1, 16);
-            ctx.fillRect(15, 0, 1, 16);
-        }
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestFilter;
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        return texture;
-    }
-    
-    const TEXTURES = {
-        wallDark: () => createPixelTexture({
-            base: '#1a1410',
-            variants: [
-                { color: '#201812', pixels: [[0,0,8,8],[8,8,8,8]] },
-                { color: '#161008', pixels: [[2,10,4,2],[10,2,4,2]] },
-                { color: '#0f0a05', pixels: [[4,4,2,2],[12,12,1,1]] }
-            ],
-            border: '#0a0604'
-        }),
-        floorDark: () => createPixelTexture({
-            base: '#1c1c1c',
-            variants: [
-                { color: '#222222', pixels: [[0,0,8,8],[8,8,8,8]] },
-                { color: '#2a2a2a', pixels: [[3,5,1,1],[12,11,1,1]] },
-                { color: '#141414', pixels: [[10,13,2,1],[2,14,1,1]] }
-            ],
-            border: '#0a0a0a'
-        }),
-        floorYellow: () => createPixelTexture({
-            base: '#b8860b',
-            variants: [
-                { color: '#c89419', pixels: [[0,0,8,8],[8,8,8,8]] },
-                { color: '#8b6508', pixels: [[15,0,1,16],[0,15,16,1]] }
-            ],
-            border: '#8b6508'
-        }),
-        wallYellow: () => createPixelTexture({
-            base: '#d4a017',
-            variants: [
-                { color: '#c89419', pixels: [[0,0,8,8],[8,8,8,8]] },
-                { color: '#8b6508', pixels: [[15,0,1,16],[0,15,16,1]] }
-            ],
-            border: '#8b6508'
-        }),
-        wood: () => createPixelTexture({
-            base: '#6b4423',
-            variants: [
-                { color: '#7a5230', pixels: [[0,0,16,8]] },
-                { color: '#5a3518', pixels: [[0,8,16,1],[0,15,16,1]] }
-            ],
-            border: '#3a2510'
-        }),
-        woodDark: () => createPixelTexture({
-            base: '#3a2510',
-            variants: [
-                { color: '#2a1a0a', pixels: [[0,0,16,2],[0,14,16,2]] }
-            ],
-            border: '#1a1005'
-        }),
-        blackCloth: () => createPixelTexture({
-            base: '#1a1a1a',
-            variants: [{ color: '#0a0a0a', pixels: [[0,0,8,8],[8,8,8,8]] }]
-        }),
-        skinDead: () => createPixelTexture({
-            base: '#6a6a7a',
-            variants: [{ color: '#5a5a6a', pixels: [[0,0,16,8]] }]
-        }),
-        hair: () => createPixelTexture({
-            base: '#1a1a1a',
-            variants: [{ color: '#0a0a0a', pixels: [[2,2,2,2]] }]
-        }),
-        painting: () => createPixelTexture({
-            base: '#4a3020',
-            variants: [
-                { color: '#6a4030', pixels: [[2,4,12,8]] },
-                { color: '#8a5040', pixels: [[6,6,4,4]] }
-            ]
-        }),
-        ceiling: () => createPixelTexture({ base: '#1a1a1a' }),
-        ceilingYellow: () => createPixelTexture({ base: '#c89419' })
-    };
-    
-    const cache = {};
-    return {
-        get(name) {
-            if (!cache[name]) cache[name] = TEXTURES[name]();
-            return cache[name];
-        }
-    };
-})();
+        // Канал мультиплеера между вкладками
+        const mpChannel = new BroadcastChannel('backrooms_mp_channel');
 
-const MaterialFactory = (() => {
-    function make(texName) {
-        return new THREE.MeshLambertMaterial({ map: TextureFactory.get(texName) });
-    }
-    return { make };
-})();
+        // Текстуры, созданные на HTML Canvas (Генерация на лету)
+        let wallTexture, carpetTexture, ceilingTexture;
 
-/* =========================================================================
-   WORLD BUILDER
-   ========================================================================= */
-const WorldBuilder = (() => {
-    const BLOCK = 1;
-    
-    function block(x, y, z, material, scale = BLOCK) {
-        const geo = new THREE.BoxGeometry(scale, scale, scale);
-        const mesh = new THREE.Mesh(geo, material);
-        mesh.position.set(x, y, z);
-        return mesh;
-    }
-    
-    function buildCorridor(scene) {
-        const corridor = new THREE.Group();
-        const length = 50, width = 5, height = 3;
-        const halfW = Math.floor(width / 2);
-        
-        const wallMat = MaterialFactory.make('wallDark');
-        const floorMat = MaterialFactory.make('floorDark');
-        const ceilMat = MaterialFactory.make('ceiling');
-        
-        // Пол
-        for (let z = 5; z >= -length; z -= BLOCK) {
-            for (let x = -halfW; x <= halfW; x += BLOCK) {
-                corridor.add(block(x, 0, z, floorMat));
-            }
-        }
-        // Потолок
-        for (let z = 5; z >= -length; z -= BLOCK) {
-            for (let x = -halfW; x <= halfW; x += BLOCK) {
-                corridor.add(block(x, height + 1, z, ceilMat));
-            }
-        }
-        // Стены
-        for (let z = 5; z >= -length; z -= BLOCK) {
-            for (let y = 1; y <= height; y += BLOCK) {
-                corridor.add(block(-halfW - 1, y, z, wallMat));
-                corridor.add(block(halfW + 1, y, z, wallMat));
-            }
-        }
-        // Задняя стена с проёмом
-        for (let x = -halfW; x <= halfW; x += BLOCK) {
-            for (let y = 1; y <= height; y += BLOCK) {
-                if (Math.abs(x) <= 1 && y <= 3) continue;
-                corridor.add(block(x, y, -length, wallMat));
-            }
-        }
-        // Передняя
-        for (let x = -halfW; x <= halfW; x += BLOCK) {
-            for (let y = 1; y <= height; y += BLOCK) {
-                corridor.add(block(x, y, 6, wallMat));
-            }
-        }
-        
-        const door = buildDoor();
-        door.position.set(0, 1.5, -length + 0.5);
-        door.userData = { type: 'door' };
-        corridor.add(door);
-        Game.interactables.push(door);
-        
-        scene.add(corridor);
-        return corridor;
-    }
-    
-    function buildDoor() {
-        const door = new THREE.Group();
-        const woodMat = MaterialFactory.make('wood');
-        const darkWood = MaterialFactory.make('woodDark');
-        
-        door.add(block(-1.2, 0, 0, darkWood, 0.2));
-        door.add(block(1.2, 0, 0, darkWood, 0.2));
-        door.add(block(0, 1.2, 0, darkWood, 0.2));
-        
-        const panel = block(0, 0, 0, woodMat, 2.2);
-        panel.scale.y = 2.4;
-        door.add(panel);
-        
-        const handle = new THREE.Mesh(
-            new THREE.BoxGeometry(0.15, 0.1, 0.15),
-            new THREE.MeshBasicMaterial({ color: 0xffcc00 })
-        );
-        handle.position.set(0.7, 0, 0.15);
-        door.add(handle);
-        return door;
-    }
-    
-    function buildRoom(scene) {
-        const room = new THREE.Group();
-        const size = 15, height = 4;
-        const halfS = Math.floor(size / 2);
-        
-        const wallMat = MaterialFactory.make('wallYellow');
-        const floorMat = MaterialFactory.make('floorYellow');
-        const ceilMat = MaterialFactory.make('ceilingYellow');
-        
-        for (let x = -halfS; x <= halfS; x += BLOCK) {
-            for (let z = -halfS; z <= halfS; z += BLOCK) {
-                room.add(block(x, 0, z, floorMat));
-                room.add(block(x, height + 1, z, ceilMat));
-            }
-        }
-        for (let x = -halfS; x <= halfS; x += BLOCK) {
-            for (let y = 1; y <= height; y += BLOCK) {
-                if (Math.abs(x) <= 1 && y <= 3) {
-                    room.add(block(x, y, halfS + 1, wallMat));
-                } else {
-                    room.add(block(x, y, -halfS - 1, wallMat));
-                    room.add(block(x, y, halfS + 1, wallMat));
+        // --- Генерация процедурных текстур ---
+        function generateTextures() {
+            // 1. Обои стен (Желтоватые с вертикальными узорами, как на фото)
+            const canvasWall = document.createElement('canvas');
+            canvasWall.width = 256; canvasWall.height = 256;
+            const ctxWall = canvasWall.getContext('2d');
+            ctxWall.fillStyle = '#cfbe7c'; ctxWall.fillRect(0,0,256,256);
+            ctxWall.strokeStyle = '#b0a060'; ctxWall.lineWidth = 2;
+            for(let i=0; i<256; i+=32) {
+                ctxWall.beginPath();
+                for(let y=0; y<=256; y+=10) {
+                    let xOff = Math.sin(y*0.1) * 3;
+                    ctxWall.lineTo(i + 16 + xOff, y);
                 }
+                ctxWall.stroke();
             }
-        }
-        for (let z = -halfS; z <= halfS; z += BLOCK) {
-            for (let y = 1; y <= height; y += BLOCK) {
-                room.add(block(-halfS - 1, y, z, wallMat));
-                room.add(block(halfS + 1, y, z, wallMat));
-            }
-        }
-        
-        const painting = buildPainting();
-        painting.position.set(-3, 2.5, halfS + 0.1);
-        painting.rotation.y = Math.PI;
-        room.add(painting);
-        
-        const lamp = new THREE.Mesh(
-            new THREE.BoxGeometry(0.6, 0.2, 0.6),
-            new THREE.MeshBasicMaterial({ color: 0xffee88 })
-        );
-        lamp.position.set(0, height, 0);
-        room.add(lamp);
-        
-        const chair = buildChair();
-        chair.position.set(Game.VANYAKEK_POS.x, 0, Game.VANYAKEK_POS.z);
-        room.add(chair);
-        
-        const vanyak = buildVanyak();
-        vanyak.position.copy(Game.VANYAKEK_POS);
-        vanyak.userData = { type: 'vanyak' };
-        room.add(vanyak);
-        Game.interactables.push(vanyak);
-        Game.vanyak = vanyak;
-        
-        const chair2 = buildChair();
-        chair2.position.set(1.5, 0, Game.VANYAKEK_POS.z);
-        room.add(chair2);
-        
-        const roomLight = new THREE.PointLight(0xffaa33, 0, 15);
-        roomLight.position.set(0, height - 0.5, 0);
-        room.add(roomLight);
-        Game.roomLight = roomLight;
-        
-        scene.add(room);
-        room.visible = false;
-        return room;
-    }
-    
-    function buildPainting() {
-        const group = new THREE.Group();
-        const frameMat = MaterialFactory.make('woodDark');
-        const canvasMat = new THREE.MeshBasicMaterial({ map: TextureFactory.get('painting') });
-        group.add(block(-1.05, 0, 0, frameMat, 0.1));
-        group.add(block(1.05, 0, 0, frameMat, 0.1));
-        group.add(block(0, 0.55, 0, frameMat, 0.1));
-        group.add(block(0, -0.55, 0, frameMat, 0.1));
-        group.add(new THREE.Mesh(new THREE.BoxGeometry(2, 1, 0.05), canvasMat));
-        return group;
-    }
-    
-    function buildChair() {
-        const chair = new THREE.Group();
-        const woodMat = MaterialFactory.make('wood');
-        const darkMat = MaterialFactory.make('woodDark');
-        [[-0.4,0.4,-0.4],[0.4,0.4,-0.4],[-0.4,0.4,0.4],[0.4,0.4,0.4]].forEach(([x,y,z]) => {
-            chair.add(new THREE.Mesh(new THREE.BoxGeometry(0.1,0.8,0.1), darkMat).translateX(x).translateY(y).translateZ(z));
-        });
-        const seat = new THREE.Mesh(new THREE.BoxGeometry(1, 0.1, 1), woodMat);
-        seat.position.y = 0.85;
-        chair.add(seat);
-        const back = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 0.1), woodMat);
-        back.position.set(0, 1.3, -0.45);
-        chair.add(back);
-        return chair;
-    }
-    
-    function buildVanyak() {
-        const vanyak = new THREE.Group();
-        const clothMat = MaterialFactory.make('blackCloth');
-        const skinMat = MaterialFactory.make('skinDead');
-        const hairMat = MaterialFactory.make('hair');
-        
-        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.4), clothMat);
-        torso.position.y = 1.3;
-        vanyak.add(torso);
-        
-        const armL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.18), clothMat);
-        armL.position.set(-0.45, 1.0, 0);
-        vanyak.add(armL);
-        const armR = armL.clone(); armR.position.x = 0.45;
-        vanyak.add(armR);
-        
-        const palmL = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.15,0.15), skinMat);
-        palmL.position.set(-0.45, 0.6, 0);
-        vanyak.add(palmL);
-        const palmR = palmL.clone(); palmR.position.x = 0.45;
-        vanyak.add(palmR);
-        
-        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.7,0.4), clothMat);
-        legL.position.set(-0.2, 0.7, 0.3);
-        vanyak.add(legL);
-        const legR = legL.clone(); legR.position.x = 0.2;
-        vanyak.add(legR);
-        
-        const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.15,0.35), new THREE.MeshLambertMaterial({color:0x000000}));
-        bootL.position.set(-0.2, 0.3, 0.45);
-        vanyak.add(bootL);
-        const bootR = bootL.clone(); bootR.position.x = 0.2;
-        vanyak.add(bootR);
-        
-        const head = new THREE.Group();
-        head.position.y = 1.9;
-        head.rotation.x = 0.6;
-        
-        const skull = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.45), skinMat);
-        head.add(skull);
-        
-        const hair = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.15, 0.47), hairMat);
-        hair.position.y = 0.25;
-        head.add(hair);
-        
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
-        const eyeGroup = new THREE.Group();
-        eyeGroup.position.z = 0.24;
-        
-        const eL1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.02), eyeMat);
-        eL1.position.set(-0.1, 0.05, 0); eL1.rotation.z = Math.PI/4;
-        const eL2 = eL1.clone(); eL2.rotation.z = -Math.PI/4;
-        eyeGroup.add(eL1, eL2);
-        
-        const eR1 = eL1.clone(); eR1.position.x = 0.1;
-        const eR2 = eL2.clone(); eR2.position.x = 0.1;
-        eyeGroup.add(eR1, eR2);
-        
-        head.add(eyeGroup);
-        Game.vanyakEyes = eyeGroup;
-        
-        const mouth = new THREE.Mesh(
-            new THREE.BoxGeometry(0.15, 0.03, 0.02),
-            new THREE.MeshBasicMaterial({ color: 0x2a1a1a })
-        );
-        mouth.position.set(0, -0.1, 0.24);
-        head.add(mouth);
-        
-        vanyak.add(head);
-        Game.vanyakHead = head;
-        return vanyak;
-    }
-    
-    return { buildCorridor, buildRoom };
-})();
+            wallTexture = new THREE.CanvasTexture(canvasWall);
+            wallTexture.wrapS = THREE.RepeatWrapping; wallTexture.wrapT = THREE.RepeatWrapping;
 
-/* =========================================================================
-   GAME LOGIC
-   ========================================================================= */
-const GameLogic = (() => {
-    function initScene() {
-        Game.renderer = new THREE.WebGLRenderer({ antialias: false });
-        Game.renderer.setSize(window.innerWidth, window.innerHeight);
-        Game.renderer.setPixelRatio(1);
-        Game.renderer.setClearColor(0x000000, 1);
-        document.body.appendChild(Game.renderer.domElement);
-        
-        Game.scene = new THREE.Scene();
-        Game.scene.fog = new THREE.Fog(0x000000, 0, 25);
-        
-        Game.camera = new THREE.PerspectiveCamera(
-            75, window.innerWidth / window.innerHeight, 0.1, 100
-        );
-        Game.camera.position.copy(Game.player.position);
-        Game.camera.rotation.order = 'YXZ'; // важно для fallback yaw/pitch
-        
-        Game.ambientLight = new THREE.AmbientLight(0x404040, 0.15);
-        Game.scene.add(Game.ambientLight);
-        
-        Game.flashlight = new THREE.SpotLight(0xffeecc, 0, 15, Math.PI / 5, 0.4, 1.5);
-        Game.flashlight.position.set(0, 0, 0);
-        Game.flashlight.target.position.set(0, 0, -1);
-        Game.camera.add(Game.flashlight);
-        Game.camera.add(Game.flashlight.target);
-        Game.scene.add(Game.camera);
-        
-        Game.corridor = WorldBuilder.buildCorridor(Game.scene);
-        Game.room = WorldBuilder.buildRoom(Game.scene);
-        
-        // Пытаемся создать PointerLockControls
-        try {
-            Game.controls = new THREE.PointerLockControls(Game.camera, document.body);
-            Game.controls.addEventListener('lock', () => {
-                Game.pointerLocked = true;
-                updateLockStatus();
-                document.getElementById('lockScreen').style.display = 'none';
-            });
-            Game.controls.addEventListener('unlock', () => {
-                Game.pointerLocked = false;
-                updateLockStatus();
-                if (!Game.gameEnded) {
-                    document.getElementById('lockScreen').style.display = 'flex';
-                }
-            });
-        } catch (e) {
-            console.warn('PointerLockControls недоступны, используем fallback:', e);
-            Game.controls = null;
+            // 2. Ковер (Грязный, мокрый ворс)
+            const canvasCarpet = document.createElement('canvas');
+            canvasCarpet.width = 128; canvasCarpet.height = 128;
+            const ctxCarpet = canvasCarpet.getContext('2d');
+            ctxCarpet.fillStyle = '#a69663'; ctxCarpet.fillRect(0,0,128,128);
+            for(let i=0; i<3000; i++) {
+                ctxCarpet.fillStyle = Math.random() > 0.5 ? '#8f8152' : '#b8a974';
+                ctxCarpet.fillRect(Math.random()*128, Math.random()*128, 2, 2);
+            }
+            carpetTexture = new THREE.CanvasTexture(canvasCarpet);
+            carpetTexture.wrapS = THREE.RepeatWrapping; carpetTexture.wrapT = THREE.RepeatWrapping;
+            carpetTexture.repeat.set(2, 2);
+
+            // 3. Потолок (Плиты со структурами)
+            const canvasCeil = document.createElement('canvas');
+            canvasCeil.width = 256; canvasCeil.height = 256;
+            const ctxCeil = canvasCeil.getContext('2d');
+            ctxCeil.fillStyle = '#dfdfcf'; ctxCeil.fillRect(0,0,256,256);
+            ctxCeil.strokeStyle = '#b0b0a0'; ctxCeil.strokeRect(0,0,256,256);
+            for(let i=0; i<500; i++) {
+                ctxCeil.fillStyle = 'rgba(0,0,0,0.05)';
+                ctxCeil.fillRect(Math.random()*256, Math.random()*256, 3, 3);
+            }
+            ceilingTexture = new THREE.CanvasTexture(canvasCeil);
+            ceilingTexture.wrapS = THREE.RepeatWrapping; ceilingTexture.wrapT = THREE.RepeatWrapping;
         }
-        
-        setupEventListeners();
-        updateLockStatus();
-    }
-    
-    function updateLockStatus() {
-        const status = document.getElementById('lockStatus');
-        if (Game.pointerLocked) {
-            status.textContent = 'Мышь: захвачена ✓';
-            status.style.color = '#55ff55';
-        } else {
-            status.textContent = 'Мышь: не захвачена (СТРЕЛКИ для обзора)';
-            status.style.color = '#ff5555';
-        }
-    }
-    
-    function setupEventListeners() {
-        // Клик в ЛЮБОМ месте — пытаемся захватить курсор
-        document.addEventListener('click', (e) => {
-            if (Game.gameEnded) return;
+
+        // --- Псевдослучайный бесконечный лабиринт (Minecraft-style алгоритм) ---
+        // Возвращает true, если на этих координатах сетки должна стоять стена
+        function checkStructure(cx, cz) {
+            if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) return false; // Безопасная зона спавна
             
-            if (!Game.pointerLocked) {
-                if (Game.controls && typeof Game.controls.lock === 'function') {
-                    try {
-                        Game.controls.lock();
-                    } catch (err) {
-                        console.warn('Pointer lock не сработал, используем стрелки:', err);
+            // Генерация бесконечных длинных коридоров и комнат с помощью тригонометрии
+            let noiseH1 = Math.sin(cx * 0.4) * Math.cos(cz * 0.4);
+            let noiseH2 = Math.cos(cx * 0.1) * Math.sin(cz * 0.1);
+            
+            // Создаем сетку пересекающихся стен
+            let isWall = false;
+            if (Math.abs(cx) % 6 === 0 && noiseH1 > -0.2) isWall = true;
+            if (Math.abs(cz) % 6 === 0 && noiseH2 > -0.2) isWall = true;
+            
+            // Случайные проходы (двери) в стенах, чтобы не запереть игрока
+            if (isWall) {
+                let doorCheck = Math.sin(cx * 12.3 + cz * 37.7);
+                if (doorCheck > 0.4) isWall = false;
+            }
+            
+            return isWall;
+        }
+
+        // --- Инициализация сцены Three.js ---
+        function init() {
+            clock = new THREE.Clock();
+            generateTextures();
+
+            // Сцена и камера
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color('#14130e');
+            scene.fog = new THREE.FogExp2('#14130e', 0.09); // Густой пугающий туман
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.copy(playerPos);
+            scene.add(camera);
+
+            // Освещение: Общий тусклый свет уровня
+            const ambientLight = new THREE.AmbientLight('#2c2a1e', 0.6);
+            scene.add(ambientLight);
+
+            // Фонарик игрока (Тот самый крутой интерактивный элемент)
+            flashlight = new THREE.SpotLight('#ffeaa7', 2, 25, Math.PI / 4, 0.5, 1);
+            flashlight.position.set(0, 0, 0);
+            flashlight.castShadow = false;
+            camera.add(flashlight);
+            camera.add(flashlight.target);
+            flashlight.target.position.set(0, 0, -1);
+
+            // Рендерер
+            renderer = new THREE.WebGLRenderer({ antialias: false }); // Отключаем сглаживание для олдскульного вида
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Слушатели управления
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousemove', onMouseMove);
+            
+            // Клик по экрану блокирует курсор мыши
+            document.body.addEventListener('click', () => {
+                if(isPlaying) document.body.requestPointerLock();
+            });
+
+            // Создаем монстров вокруг
+            spawnMonsters();
+        }
+
+        // --- Логика генерации мира вокруг игрока (Оптимизация чанков) ---
+        function updateInfiniteMaze() {
+            let pGridX = Math.floor(playerPos.x / CELL_SIZE);
+            let pGridZ = Math.floor(playerPos.z / CELL_SIZE);
+
+            const activeKeys = new Set();
+
+            const wallGeo = new THREE.BoxGeometry(CELL_SIZE, 3, CELL_SIZE);
+            const wallMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.8 });
+
+            const floorGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
+            const floorMat = new THREE.MeshStandardMaterial({ map: carpetTexture, roughness: 0.9 });
+
+            const ceilGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
+            const ceilMat = new THREE.MeshStandardMaterial({ map: ceilingTexture, roughness: 0.5 });
+            // Материал для светящихся ламп
+            const lampMat = new THREE.MeshBasicMaterial({ color: '#fffebd' });
+
+            // Пробегаем по видимой области вокруг игрока
+            for (let x = pGridX - CHUNK_RADIUS; x <= pGridX + CHUNK_RADIUS; x++) {
+                for (let z = pGridZ - CHUNK_RADIUS; z <= pGridZ + CHUNK_RADIUS; z++) {
+                    let key = `${x},${z}`;
+                    activeKeys.add(key);
+
+                    if (!spawnedWalls.has(key)) {
+                        let group = new THREE.Group();
+
+                        // 1. Пол
+                        let floor = new THREE.Mesh(floorGeo, floorMat);
+                        floor.rotation.x = -Math.PI / 2;
+                        floor.position.set(x * CELL_SIZE, 0, z * CELL_SIZE);
+                        group.add(floor);
+
+                        // 2. Потолок или Лампа
+                        let isLamp = (Math.abs(x) % 3 === 0 && Math.abs(z) % 3 === 0 && !checkStructure(x,z));
+                        let ceilMesh;
+                        if (isLamp) {
+                            ceilMesh = new THREE.Mesh(ceilGeo, lampMat);
+                            // Добавим точечный свет от ламп для реалистичности
+                            if(Math.random() > 0.3) { // Немного рандома, чтобы не перегружать GPU
+                                let lampLight = new THREE.PointLight('#ffeaa7', 0.2, 8);
+                                lampLight.position.set(0, -0.1, 0);
+                                ceilMesh.add(lampLight);
+                            }
+                        } else {
+                            ceilMesh = new THREE.Mesh(ceilGeo, ceilMat);
+                        }
+                        ceilMesh.rotation.x = Math.PI / 2;
+                        ceilMesh.position.set(x * CELL_SIZE, 3, z * CELL_SIZE);
+                        group.add(ceilMesh);
+
+                        // 3. Стена (если есть структура)
+                        if (checkStructure(x, z)) {
+                            let wall = new THREE.Mesh(wallGeo, wallMat);
+                            wall.position.set(x * CELL_SIZE, 1.5, z * CELL_SIZE);
+                            group.add(wall);
+                        }
+
+                        scene.add(group);
+                        spawnedWalls.set(key, group);
                     }
                 }
-                document.getElementById('lockScreen').style.display = 'none';
             }
-        });
-        
-        document.addEventListener('keydown', (e) => {
-            const k = e.key.toLowerCase();
-            Game.keys[k] = true;
-            
-            if (k === 'f') toggleFlashlight();
-            if (k === 'e') handleInteraction();
-            
-            // Предотвращаем прокрутку стрелками
-            if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) {
-                e.preventDefault();
+
+            // Удаляем старые чанки, которые далеко, для идеальной оптимизации
+            for (let [key, mesh] of spawnedWalls.entries()) {
+                if (!activeKeys.has(key)) {
+                    scene.remove(mesh);
+                    spawnedWalls.delete(key);
+                }
             }
-        });
-        
-        document.addEventListener('keyup', (e) => {
-            Game.keys[e.key.toLowerCase()] = false;
-        });
-        
-        window.addEventListener('resize', () => {
-            Game.camera.aspect = window.innerWidth / window.innerHeight;
-            Game.camera.updateProjectionMatrix();
-            Game.renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    }
-    
-    function toggleFlashlight() {
-        if (Game.location !== 'corridor') return;
-        Game.flashlightOn = !Game.flashlightOn;
-        Game.flashlight.intensity = Game.flashlightOn ? 2.5 : 0;
-    }
-    
-    function handleInteraction() {
-        if (Game.dialogActive) return;
-        
-        Game.raycaster.setFromCamera(new THREE.Vector2(0, 0), Game.camera);
-        Game.raycaster.far = 3.5;
-        
-        const allMeshes = [];
-        Game.interactables.forEach(obj => {
-            if (!obj.visible) return;
-            obj.traverse(child => { if (child.isMesh) allMeshes.push(child); });
-        });
-        
-        const hits = Game.raycaster.intersectObjects(allMeshes, false);
-        if (hits.length === 0) return;
-        
-        let target = hits[0].object;
-        while (target && !target.userData.type) target = target.parent;
-        if (!target) return;
-        
-        if (target.userData.type === 'door' && !Game.doorOpened && Game.location === 'corridor') {
-            openDoor(target);
-        } else if (target.userData.type === 'vanyak' && Game.location === 'room') {
-            startDialogue();
         }
-    }
-    
-    function openDoor(door) {
-        Game.doorOpened = true;
-        showDialog("*дверь со скрипом открывается...*");
-        
-        const startRot = door.rotation.y;
-        const targetRot = Math.PI / 2;
-        const startTime = performance.now();
-        const duration = 800;
-        
-        (function animDoor() {
-            const t = Math.min(1, (performance.now() - startTime) / duration);
-            door.rotation.y = startRot + (targetRot - startRot) * t;
-            if (t < 1) requestAnimationFrame(animDoor);
-        })();
-        
-        setTimeout(() => {
-            hideDialog();
-            enterRoom();
-        }, 2000);
-    }
-    
-    function enterRoom() {
-        Game.location = 'room';
-        Game.flashlightOn = false;
-        Game.flashlight.intensity = 0;
-        
-        Game.camera.position.set(0, 1.7, 5);
-        Game.player.yaw = 0;
-        Game.player.pitch = 0;
-        Game.camera.rotation.set(0, 0, 0);
-        
-        Game.corridor.visible = false;
-        Game.room.visible = true;
-        
-        Game.scene.fog = new THREE.Fog(0x3a2800, 1, 30);
-        Game.scene.background = new THREE.Color(0x3a2800);
-        Game.roomLight.intensity = 1.8;
-        Game.ambientLight.intensity = 0.4;
-        
-        setTimeout(() => {
-            showDialog("*жёлтый свет. запах пыли и чего-то старого...*");
-            setTimeout(hideDialog, 3000);
-        }, 500);
-    }
-    
-    function startDialogue() {
-        Game.dialogActive = true;
-        Game.dialogStep = 0;
-        showDialog(DIALOGUES[0].text);
-        setTimeout(nextDialogue, DIALOGUES[0].delay);
-    }
-    
-    function nextDialogue() {
-        Game.dialogStep++;
-        if (Game.dialogStep >= DIALOGUES.length) {
-            endDialogue();
-            return;
-        }
-        
-        const line = DIALOGUES[Game.dialogStep];
-        showDialog(line.text);
-        
-        if (line.action === 'lift_head' && Game.vanyakHead) {
-            const startRot = Game.vanyakHead.rotation.x;
-            const startTime = performance.now();
-            const duration = 1500;
-            (function animHead() {
-                const t = Math.min(1, (performance.now() - startTime) / duration);
-                Game.vanyakHead.rotation.x = startRot * (1 - t);
-                if (t < 1) requestAnimationFrame(animHead);
-            })();
-        }
-        
-        if (line.action === 'open_eyes' && Game.vanyakEyes) {
-            while (Game.vanyakEyes.children.length > 0) {
-                Game.vanyakEyes.remove(Game.vanyakEyes.children[0]);
+
+        // --- Реалистичный синтез звука (Web Audio API) ---
+        function startAmbientAudio() {
+            try {
+                let AudioContext = window.AudioContext || window.webkitAudioContext;
+                let audioCtx = new AudioContext();
+
+                // Низкочастотный гул ламп (60 Гц + 120 Гц гармоники)
+                let osc = audioCtx.createOscillator();
+                let gainNode = audioCtx.createGain();
+                let filter = audioCtx.createBiquadFilter();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+                
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(150, audioCtx.currentTime);
+
+                gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime); // Очень тихий фон
+
+                osc.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                osc.start();
+            } catch(e) {
+                console.log("Аудио контекст не поддерживается блокировкой браузера.");
             }
-            const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const redMat = new THREE.MeshBasicMaterial({ color: 0xff2020 });
-            
-            const wL = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.08,0.02), whiteMat);
-            wL.position.set(-0.1, 0.05, 0);
-            const rL = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.05,0.02), redMat);
-            rL.position.set(-0.1, 0.05, 0.01);
-            Game.vanyakEyes.add(wL, rL);
-            
-            const wR = wL.clone(); wR.position.x = 0.1;
-            const rR = rL.clone(); rR.position.x = 0.1;
-            Game.vanyakEyes.add(wR, rR);
         }
-        
-        setTimeout(nextDialogue, line.delay);
-    }
-    
-    function endDialogue() {
-        hideDialog();
-        Game.dialogActive = false;
-        Game.gameEnded = true;
-        
-        setTimeout(() => {
-            document.body.classList.add('flicker');
-            showDialog("*что-то холодное касается твоей руки...*");
+
+        // --- Обработка коллизий (Minecraft-стиль скольжения по стенам) ---
+        function checkCollision(targetPos) {
+            let buffer = 0.4; // Радиус физического тела игрока
+            let checkPoints = [
+                {x: targetPos.x - buffer, z: targetPos.z - buffer},
+                {x: targetPos.x + buffer, z: targetPos.z - buffer},
+                {x: targetPos.x - buffer, z: targetPos.z + buffer},
+                {x: targetPos.x + buffer, z: targetPos.z + buffer}
+            ];
+
+            for (let pt of checkPoints) {
+                let gx = Math.round(pt.x / CELL_SIZE);
+                let gz = Math.round(pt.z / CELL_SIZE);
+                if (checkStructure(gx, gz)) {
+                    return true; // Столкновение со стеной!
+                }
+            }
+            return false;
+        }
+
+        // --- Управление клавиатурой и мышью ---
+        function onKeyDown(e) {
+            if(!isPlaying) return;
+            switch (e.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'ShiftLeft': isSprinting = true; break;
+                case 'KeyF': // Включение / Выключение фонарика
+                    flashlight.visible = !flashlight.visible;
+                    break;
+            }
+        }
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const inputName = document.getElementById('nickname-input').value.trim();
+            if(inputName) myName = inputName;
+            document.getElementById('player-name').innerText = "Игрок: " + myName;
+
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('crosshair').style.display = 'block';
+            document.getElementById('instructions').style.display = 'block';
             
+            isPlaying = true;
+            document.body.requestPointerLock();
+            
+            // Запуск аудио
+            startAmbientAudio();
+        });
+
+        function onKeyUp(e) {
+            switch (e.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+                case 'ShiftLeft': isSprinting = false; break;
+            }
+        }
+
+        function onMouseMove(e) {
+            if (document.pointerLockElement !== document.body) return;
+            
+            yaw -= e.movementX * 0.0025;
+            pitch -= e.movementY * 0.0025;
+            
+            pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, pitch));
+            
+            camera.rotation.set(0, 0, 0);
+            camera.rotation.y = yaw;
+            camera.rotation.x = pitch;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- Физика монстров (Враждебные сущности) ---
+        function spawnMonsters() {
+            // Создаем 3-х жутких монстров (Сущностей)
+            const monsterMat = new THREE.MeshBasicMaterial({ color: '#0a0a0a' }); // Черные силуэты
+            const bodyGeo = new THREE.CylinderGeometry(0.2, 0.05, 2.2, 6);
+
+            for(let i=0; i<4; i++) {
+                let m = new THREE.Mesh(bodyGeo, monsterMat);
+                // Спавним их на некотором расстоянии от центра
+                let angle = Math.random() * Math.PI * 2;
+                let dist = 15 + Math.random() * 20;
+                m.position.set(Math.cos(angle)*dist, 1.1, Math.sin(angle)*dist);
+                scene.add(m);
+                monsters.push(m);
+            }
+        }
+
+        function updateMonsters(delta) {
+            monsters.forEach(m => {
+                // Вектор к игроку
+                let dir = new THREE.Vector3().subVectors(playerPos, m.position);
+                dir.y = 0;
+                let dist = dir.length();
+
+                // Если игрок близко, монстр медленно и жутко идет на него
+                if (dist < 22) {
+                    dir.normalize();
+                    let speed = 2.0; // Скорость монстра
+                    let nextPos = m.position.clone().addScaledVector(dir, speed * delta);
+                    
+                    // Проверка коллизий монстра со стенами
+                    let gx = Math.round(nextPos.x / CELL_SIZE);
+                    let gz = Math.round(nextPos.z / CELL_SIZE);
+                    if (!checkStructure(gx, gz)) {
+                        m.position.copy(nextPos);
+                    }
+
+                    // Скример при касании
+                    if (dist < 0.8) {
+                        triggerJumpscare();
+                    }
+                }
+            });
+        }
+
+        function triggerJumpscare() {
+            isPlaying = false;
+            document.exitPointerLock();
+            const js = document.getElementById('jumpscare');
+            js.style.display = 'flex';
             setTimeout(() => {
-                document.body.classList.remove('flicker');
-                Game.renderer.domElement.style.transition = 'opacity 3s';
-                Game.renderer.domElement.style.opacity = '0';
-                
-                setTimeout(() => {
-                    Game.renderer.domElement.style.display = 'none';
-                    document.getElementById('crosshair').style.display = 'none';
-                    document.getElementById('hint').style.display = 'none';
-                    document.getElementById('interactionHint').style.display = 'none';
-                    document.getElementById('dialog').style.display = 'none';
-                    document.getElementById('lockStatus').style.display = 'none';
-                    document.getElementById('endScreen').style.display = 'flex';
-                }, 3500);
-            }, 2500);
-        }, 1500);
-    }
-    
-    function showDialog(text) {
-        document.getElementById('dialog').textContent = text;
-        document.getElementById('dialog').style.display = 'block';
-    }
-    
-    function hideDialog() {
-        document.getElementById('dialog').style.display = 'none';
-    }
-    
-    function update() {
-        requestAnimationFrame(update);
-        const delta = Game.clock.getDelta();
-        
-        if (Game.gameEnded) {
-            Game.renderer.render(Game.scene, Game.camera);
-            return;
+                js.style.display = 'none';
+                // Респавн в центр
+                playerPos.set(0, 1.6, 0);
+                camera.position.copy(playerPos);
+                isPlaying = true;
+                document.body.requestPointerLock();
+            }, 1500);
         }
-        
-        // === FALLBACK: управление стрелками, если pointer lock не работает ===
-        if (!Game.pointerLocked) {
-            const rotSpeed = 2.0 * delta;
-            if (Game.keys['arrowleft'])  Game.player.yaw += rotSpeed;
-            if (Game.keys['arrowright']) Game.player.yaw -= rotSpeed;
-            if (Game.keys['arrowup'])    Game.player.pitch = Math.min(Math.PI/2 - 0.1, Game.player.pitch + rotSpeed);
-            if (Game.keys['arrowdown'])  Game.player.pitch = Math.max(-Math.PI/2 + 0.1, Game.player.pitch - rotSpeed);
-            
-            Game.camera.rotation.y = Game.player.yaw;
-            Game.camera.rotation.x = Game.player.pitch;
-        }
-        
-        // === Движение WASD ===
-        if (!Game.dialogActive) {
-            const dir = new THREE.Vector3();
-            const right = new THREE.Vector3();
-            
-            Game.camera.getWorldDirection(dir);
-            dir.y = 0;
-            dir.normalize();
-            right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
-            
-            const moveVec = new THREE.Vector3();
-            if (Game.keys['w']) moveVec.add(dir);
-            if (Game.keys['s']) moveVec.sub(dir);
-            if (Game.keys['d']) moveVec.add(right);
-            if (Game.keys['a']) moveVec.sub(right);
-            
-            if (moveVec.lengthSq() > 0) {
-                moveVec.normalize().multiplyScalar(Game.player.speed * delta);
-                const newX = Game.camera.position.x + moveVec.x;
-                const newZ = Game.camera.position.z + moveVec.z;
-                
-                let canMove = true;
-                if (Game.location === 'corridor') {
-                    if (Math.abs(newX) > 2.2) canMove = false;
-                    if (newZ > 5.0) canMove = false;
-                    if (newZ < -50.5 && !(Game.doorOpened && Math.abs(newX) < 1.2)) canMove = false;
+
+        // --- Реализация мультиплеера (Вкладки / Окна) ---
+        // Отправка наших координат другим игрокам
+        setInterval(() => {
+            if (!isPlaying) return;
+            mpChannel.postMessage({
+                type: 'update',
+                id: myId,
+                name: myName,
+                pos: { x: playerPos.x, y: playerPos.y, z: playerPos.z }
+            });
+        }, 40); // 25 FPS синхронизация пакетов
+
+        // Слушаем чужие пакеты
+        mpChannel.onmessage = (e) => {
+            if (e.data.type === 'update') {
+                let pId = e.data.id;
+                if (pId === myId) return;
+
+                if (!remotePlayers.has(pId)) {
+                    // Создаем 3D-модель игрока в виде капсулы
+                    const capGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.6, 8);
+                    const capMat = new THREE.MeshStandardMaterial({ color: '#ff7675', roughness: 0.5 }); // Розовая капсула
+                    const mesh = new THREE.Mesh(capGeo, capMat);
+                    mesh.position.set(e.data.pos.x, e.data.pos.y, e.data.pos.z);
+                    scene.add(mesh);
+
+                    remotePlayers.set(pId, {
+                        mesh: mesh,
+                        lastUpdate: Date.now()
+                    });
                 } else {
-                    if (Math.abs(newX) > 7.0) canMove = false;
-                    if (Math.abs(newZ) > 7.0) canMove = false;
+                    let pData = remotePlayers.get(pId);
+                    pData.mesh.position.set(e.data.pos.x, e.data.pos.y - 0.4, e.data.pos.z); // Коррекция высоты
+                    pData.lastUpdate = Date.now();
                 }
-                
-                if (canMove) {
-                    Game.camera.position.x = newX;
-                    Game.camera.position.z = newZ;
+
+                // Обновляем счетчик онлайна на странице
+                document.getElementById('online-count').innerText = "В сети на этой машине: " + (remotePlayers.size + 1);
+            }
+        };
+
+        // Удаление отключившихся (неактивных) игроков
+        function cleanDeadPlayers() {
+            let now = Date.now();
+            for (let [id, data] of remotePlayers.entries()) {
+                if (now - data.lastUpdate > 2000) { // Если нет вестей 2 секунды
+                    scene.remove(data.mesh);
+                    remotePlayers.delete(id);
                 }
             }
-            
-            // Head bob
-            const moving = Game.keys['w'] || Game.keys['s'] || Game.keys['a'] || Game.keys['d'];
-            if (moving) {
-                const bob = Math.sin(performance.now() * 0.008) * 0.03;
-                Game.camera.position.y = 1.7 + bob;
-            } else {
-                Game.camera.position.y = 1.7;
+            document.getElementById('online-count').innerText = "В сети на этой машине: " + (remotePlayers.size + 1);
+        }
+        setInterval(cleanDeadPlayers, 3000);
+
+        // Имитация ботов, если игрок один (Для теста)
+        let botSpawned = false;
+        function spawnSimulatedBots() {
+            if(remotePlayers.size === 0 && !botSpawned) {
+                botSpawned = true;
+                // Каждые пару секунд шлем фейковые движения ботов-капсул
+                setInterval(() => {
+                    if(remotePlayers.size === 0) {
+                        let t = Date.now() * 0.001;
+                        mpChannel.postMessage({
+                            type: 'update', id: 'bot_1', name: 'Симуляция_Капсула',
+                            pos: { x: Math.sin(t)*8 + 4, y: 1.6, z: Math.cos(t)*8 + 4 }
+                        });
+                    }
+                }, 50);
             }
         }
-        
-        updateInteractionHint();
-        
-        if (Game.location === 'room' && Game.roomLight) {
-            const t = performance.now() * 0.01;
-            Game.roomLight.intensity = 1.6 + Math.sin(t * 7.3) * 0.15 + Math.sin(t * 13.7) * 0.08;
-        }
-        
-        Game.renderer.render(Game.scene, Game.camera);
-    }
-    
-    function updateInteractionHint() {
-        const hint = document.getElementById('interactionHint');
-        if (Game.dialogActive) { hint.style.display = 'none'; return; }
-        
-        Game.raycaster.setFromCamera(new THREE.Vector2(0, 0), Game.camera);
-        Game.raycaster.far = 3.5;
-        
-        const allMeshes = [];
-        Game.interactables.forEach(obj => {
-            if (!obj.visible) return;
-            obj.traverse(child => { if (child.isMesh) allMeshes.push(child); });
-        });
-        
-        const hits = Game.raycaster.intersectObjects(allMeshes, false);
-        if (hits.length > 0) {
-            let target = hits[0].object;
-            while (target && !target.userData.type) target = target.parent;
-            
-            if (target) {
-                let text = '';
-                if (target.userData.type === 'door' && !Game.doorOpened && Game.location === 'corridor') {
-                    text = '[E] Открыть дверь';
-                } else if (target.userData.type === 'vanyak' && Game.location === 'room') {
-                    text = '[E] Поговорить';
+        setTimeout(spawnSimulatedBots, 5000);
+
+
+        // --- Основной Игровой Цикл (Loop) ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            let delta = clock.getDelta();
+            // Ограничение слишком больших скачков кадров
+            if (delta > 0.1) delta = 0.1; 
+
+            if (isPlaying) {
+                // 1. Движение и Скорость
+                let currentSpeed = isSprinting ? SPEED_SPRINT : SPEED_WALK;
+                playerVelocity.set(0, 0, 0);
+
+                // Направление движения относительно взгляда камеры
+                let forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+                let right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+                if (moveForward) playerVelocity.add(forward);
+                if (moveBackward) playerVelocity.add(forward.clone().negate());
+                if (moveRight) playerVelocity.add(right);
+                if (moveLeft) playerVelocity.add(right.clone().negate());
+
+                if (playerVelocity.lengthSq() > 0) {
+                    playerVelocity.normalize().multiplyScalar(currentSpeed * delta);
+                    
+                    // Покомпонентная проверка коллизий для плавного скольжения по стенам
+                    let nextX = playerPos.clone(); nextX.x += playerVelocity.x;
+                    if (!checkCollision(nextX)) playerPos.x = nextX.x;
+
+                    let nextZ = playerPos.clone(); nextZ.z += playerVelocity.z;
+                    if (!checkCollision(nextZ)) playerPos.z = nextZ.z;
                 }
-                if (text) {
-                    hint.textContent = text;
-                    hint.style.display = 'block';
-                    return;
-                }
+
+                // Обновляем позицию камеры
+                camera.position.copy(playerPos);
+
+                // 2. Генерация карты вокруг игрока
+                updateInfiniteMaze();
+
+                // 3. Обновление монстров
+                updateMonsters(delta);
             }
+
+            renderer.render(scene, camera);
         }
-        hint.style.display = 'none';
-    }
-    
-    return { initScene, update };
-})();
 
-window.addEventListener('load', () => {
-    GameLogic.initScene();
-    GameLogic.update();
-});
+        // Запуск
+        init();
+        animate();
 
-// GitHub: KilixKilik
-</script>
-
+    </script>
 </body>
 </html>
