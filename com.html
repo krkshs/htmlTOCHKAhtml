@@ -3,176 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Backrooms: Lost in JavaScript</title>
+    <title>The Backrooms: Реальный Онлайн</title>
     <style>
         html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
-            font-family: 'Courier New', Courier, monospace;
-            user-select: none;
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #000;
+            font-family: 'Courier New', Courier, monospace; user-select: none;
         }
-
-        #canvas-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        /* Эффект VHS помех */
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* Реалистичный VHS фильтр */
         #vhs-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 6px 100%;
-            z-index: 2;
-            pointer-events: none;
-            opacity: 0.8;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 3px 100%; z-index: 2; pointer-events: none; opacity: 0.85;
         }
 
-        /* Главное меню */
         #menu {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #1a1913;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            color: #d1c28a;
-            text-align: center;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #242214; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 10; color: #d1c28a; text-align: center;
         }
-
-        #menu h1 {
-            font-size: 3rem;
-            margin-bottom: 5px;
-            letter-spacing: 5px;
-            color: #f1e4a3;
-            text-shadow: 3px 3px 0px #000;
-        }
-
-        #menu p {
-            font-size: 1rem;
-            margin-bottom: 30px;
-            color: #8a8158;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
+        #menu h1 { font-size: 3rem; margin-bottom: 5px; letter-spacing: 5px; color: #eedc82; text-shadow: 3px 3px 0px #000; }
+        .input-group { margin-bottom: 20px; }
         #nickname-input {
-            background: #2b291f;
-            border: 2px solid #54503d;
-            padding: 12px 20px;
-            font-size: 1.2rem;
-            color: #fff;
-            outline: none;
-            text-align: center;
-            border-radius: 4px;
-            font-family: inherit;
+            background: #15140b; border: 2px solid #54503d; padding: 12px 20px;
+            font-size: 1.2rem; color: #fff; outline: none; text-align: center; border-radius: 4px; font-family: inherit;
         }
-
-        #nickname-input:focus {
-            border-color: #d1c28a;
-        }
-
         #start-btn {
-            background: #d1c28a;
-            color: #1a1913;
-            border: none;
-            padding: 12px 30px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.2s;
-            font-family: inherit;
-            box-shadow: 0 4px 0px #8a8158;
+            background: #eedc82; color: #1a1913; border: none; padding: 12px 30px;
+            font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 4px;
+            box-shadow: 0 4px 0px #8a8158; font-family: inherit;
         }
+        #start-btn:hover { background: #fff1b0; }
 
-        #start-btn:hover {
-            background: #f1e4a3;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 0px #8a8158;
-        }
-
-        #start-btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 0px #8a8158;
-        }
-
-        /* Интерфейс внутри игры */
         #hud {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 5;
-            color: #e2d69a;
-            font-size: 1rem;
-            pointer-events: none;
-            display: none;
+            position: absolute; top: 20px; left: 20px; z-index: 5;
+            color: #e2d69a; font-size: 1.1rem; pointer-events: none; display: none;
             text-shadow: 1px 1px 2px #000;
         }
-
         #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 6px;
-            height: 6px;
-            background: rgba(255,255,255,0.4);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 5;
-            pointer-events: none;
-            display: none;
+            position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+            background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%);
+            z-index: 5; pointer-events: none; display: none;
         }
-
         #instructions {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(217, 201, 131, 0.6);
-            font-size: 0.9rem;
-            z-index: 5;
-            pointer-events: none;
-            text-align: center;
-            display: none;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: rgba(217, 201, 131, 0.7); font-size: 0.9rem; z-index: 5; pointer-events: none; text-align: center; display: none;
         }
-
-        /* Скример */
         #jumpscare {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 100;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            color: red;
-            font-size: 5rem;
-            font-weight: bold;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505;
+            z-index: 100; display: none; justify-content: center; align-items: center; color: #800; font-size: 4rem; font-weight: bold;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 </head>
 <body>
 
@@ -180,188 +66,160 @@
 
     <div id="menu">
         <h1>THE BACKROOMS</h1>
-        <p>Уровень 0 • Бесконечный архив монотонности</p>
+        <p>Уровень 0 • Настоящий Онлайн (GitHub версия)</p>
         <div class="input-group">
-            <input type="text" id="nickname-input" placeholder="Введите ваш ник" maxlength="12" value="Игрок">
+            <input type="text" id="nickname-input" placeholder="Ваш ник" maxlength="12" value="Игрок">
         </div>
-        <button id="start-btn">ПРОДОЛЖИТЬ</button>
+        <button id="start-btn">ПОДКЛЮЧИТЬСЯ</button>
     </div>
 
     <div id="hud">
-        <div id="player-name">Игрок: Unknown</div>
-        <div id="online-count">В сети на этой машине: 1</div>
+        <div id="player-name">Игрок: -</div>
+        <div id="online-count">В игре: 1</div>
     </div>
 
     <div id="crosshair"></div>
-    <div id="instructions">WASD — Движение | SHIFT — Бег | F — Фонарик | Мышь — Обзор (Клик для захвата)</div>
-    
+    <div id="instructions">WASD — Ходить | Shift — Бег | F — Фонарик | Клик по экрану активирует мышь</div>
     <div id="jumpscare">ВЫ ПОЙМАНЫ</div>
+
     <div id="canvas-container"></div>
 
     <script>
-        // --- Настройки игры ---
-        const CELL_SIZE = 4; // Размер одного блока лабиринта в метрах
-        const CHUNK_RADIUS = 8; // Радиус прорисовки блоков вокруг игрока
-        const SPEED_WALK = 3.5;
-        const SPEED_SPRINT = 6.0;
-        
+        const CELL_SIZE = 4;
+        const CHUNK_RADIUS = 9;
+        const SPEED_WALK = 3.2;
+        const SPEED_SPRINT = 5.5;
+
         let scene, camera, renderer, clock;
-        let myId = '_' + Math.random().toString(36).substr(2, 9);
+        let myId = 'player_' + Math.random().toString(36).substr(2, 9);
         let myName = "Игрок";
         let isPlaying = false;
 
-        // Физика и управление
+        // Движение и углы обзора
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isSprinting = false;
         let yaw = 0, pitch = 0;
-        const playerPos = new THREE.Vector3(0, 1.6, 0); // Спавн в центре (0,0)
+        const playerPos = new THREE.Vector3(0, 1.5, 0); 
         let playerVelocity = new THREE.Vector3();
-        let flashlight, ambientBuzz;
-        
-        // Списки объектов
-        const spawnedWalls = new Map(); // Кэш чанков стен key -> mesh
-        const remotePlayers = new Map(); // Другие игроки (капсулы)
-        const monsters = [];
 
-        // Канал мультиплеера между вкладками
-        const mpChannel = new BroadcastChannel('backrooms_mp_channel');
+        let flashlight, mqttClient;
+        const spawnedWalls = new Map();
+        const remotePlayers = new Map();
+        let monsterMesh;
+        let monsterSpeed = 2.4;
 
-        // Текстуры, созданные на HTML Canvas (Генерация на лету)
+        // Текстуры в точности как на скрине
         let wallTexture, carpetTexture, ceilingTexture;
 
-        // --- Генерация процедурных текстур ---
-        function generateTextures() {
-            // 1. Обои стен (Желтоватые с вертикальными узорами, как на фото)
+        function generateExactTextures() {
+            // 1. Обои (Желтые с наслоенными дугами/арками)
             const canvasWall = document.createElement('canvas');
             canvasWall.width = 256; canvasWall.height = 256;
             const ctxWall = canvasWall.getContext('2d');
-            ctxWall.fillStyle = '#cfbe7c'; ctxWall.fillRect(0,0,256,256);
-            ctxWall.strokeStyle = '#b0a060'; ctxWall.lineWidth = 2;
-            for(let i=0; i<256; i+=32) {
-                ctxWall.beginPath();
-                for(let y=0; y<=256; y+=10) {
-                    let xOff = Math.sin(y*0.1) * 3;
-                    ctxWall.lineTo(i + 16 + xOff, y);
+            ctxWall.fillStyle = '#cfbe73'; ctxWall.fillRect(0,0,256,256);
+            
+            // Рисуем узоры арок
+            ctxWall.strokeStyle = '#a69a63'; ctxWall.lineWidth = 1.5;
+            for(let x=0; x<=256; x+=32) {
+                for(let y=-16; y<=272; y+=24) {
+                    ctxWall.beginPath();
+                    ctxWall.arc(x + 16, y + 20, 16, Math.PI, 0);
+                    ctxWall.stroke();
                 }
-                ctxWall.stroke();
             }
             wallTexture = new THREE.CanvasTexture(canvasWall);
             wallTexture.wrapS = THREE.RepeatWrapping; wallTexture.wrapT = THREE.RepeatWrapping;
 
-            // 2. Ковер (Грязный, мокрый ворс)
+            // 2. Ковер (Грязный болотный ворс)
             const canvasCarpet = document.createElement('canvas');
             canvasCarpet.width = 128; canvasCarpet.height = 128;
             const ctxCarpet = canvasCarpet.getContext('2d');
-            ctxCarpet.fillStyle = '#a69663'; ctxCarpet.fillRect(0,0,128,128);
-            for(let i=0; i<3000; i++) {
-                ctxCarpet.fillStyle = Math.random() > 0.5 ? '#8f8152' : '#b8a974';
-                ctxCarpet.fillRect(Math.random()*128, Math.random()*128, 2, 2);
+            ctxCarpet.fillStyle = '#9e8e59'; ctxCarpet.fillRect(0,0,128,128);
+            for(let i=0; i<4000; i++) {
+                ctxCarpet.fillStyle = Math.random() > 0.5 ? '#857747' : '#ad9d68';
+                ctxCarpet.fillRect(Math.random()*128, Math.random()*128, 1.5, 1.5);
             }
             carpetTexture = new THREE.CanvasTexture(canvasCarpet);
             carpetTexture.wrapS = THREE.RepeatWrapping; carpetTexture.wrapT = THREE.RepeatWrapping;
             carpetTexture.repeat.set(2, 2);
 
-            // 3. Потолок (Плиты со структурами)
+            // 3. Потолок
             const canvasCeil = document.createElement('canvas');
-            canvasCeil.width = 256; canvasCeil.height = 256;
+            canvasCeil.width = 128; canvasCeil.height = 128;
             const ctxCeil = canvasCeil.getContext('2d');
-            ctxCeil.fillStyle = '#dfdfcf'; ctxCeil.fillRect(0,0,256,256);
-            ctxCeil.strokeStyle = '#b0b0a0'; ctxCeil.strokeRect(0,0,256,256);
-            for(let i=0; i<500; i++) {
-                ctxCeil.fillStyle = 'rgba(0,0,0,0.05)';
-                ctxCeil.fillRect(Math.random()*256, Math.random()*256, 3, 3);
-            }
+            ctxCeil.fillStyle = '#dcdcc5'; ctxCeil.fillRect(0,0,128,128);
+            ctxCeil.strokeStyle = '#abab96'; ctxCeil.strokeRect(0,0,128,128);
             ceilingTexture = new THREE.CanvasTexture(canvasCeil);
             ceilingTexture.wrapS = THREE.RepeatWrapping; ceilingTexture.wrapT = THREE.RepeatWrapping;
         }
 
-        // --- Псевдослучайный бесконечный лабиринт (Minecraft-style алгоритм) ---
-        // Возвращает true, если на этих координатах сетки должна стоять стена
+        // Карта лабиринта
         function checkStructure(cx, cz) {
-            if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) return false; // Безопасная зона спавна
-            
-            // Генерация бесконечных длинных коридоров и комнат с помощью тригонометрии
-            let noiseH1 = Math.sin(cx * 0.4) * Math.cos(cz * 0.4);
-            let noiseH2 = Math.cos(cx * 0.1) * Math.sin(cz * 0.1);
-            
-            // Создаем сетку пересекающихся стен
+            if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) return false; // Спавн свободен
+            let n1 = Math.sin(cx * 0.5) * Math.cos(cz * 0.5);
+            let n2 = Math.cos(cx * 0.2) * Math.sin(cz * 0.2);
             let isWall = false;
-            if (Math.abs(cx) % 6 === 0 && noiseH1 > -0.2) isWall = true;
-            if (Math.abs(cz) % 6 === 0 && noiseH2 > -0.2) isWall = true;
-            
-            // Случайные проходы (двери) в стенах, чтобы не запереть игрока
-            if (isWall) {
-                let doorCheck = Math.sin(cx * 12.3 + cz * 37.7);
-                if (doorCheck > 0.4) isWall = false;
-            }
-            
+            if (Math.abs(cx) % 5 === 0 && n1 > -0.3) isWall = true;
+            if (Math.abs(cz) % 5 === 0 && n2 > -0.3) isWall = true;
+            if (isWall && Math.sin(cx * 5.1 + cz * 9.2) > 0.3) isWall = false; // Проходы
             return isWall;
         }
 
-        // --- Инициализация сцены Three.js ---
-        function init() {
+        function init3D() {
             clock = new THREE.Clock();
-            generateTextures();
+            generateExactTextures();
 
-            // Сцена и камера
             scene = new THREE.Scene();
-            scene.background = new THREE.Color('#14130e');
-            scene.fog = new THREE.FogExp2('#14130e', 0.09); // Густой пугающий туман
+            scene.background = new THREE.Color('#222013');
+            // Желтовато-зеленый туман для точной атмосферы
+            scene.fog = new THREE.FogExp2('#222013', 0.08); 
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
             camera.position.copy(playerPos);
+            
+            // ВАЖНО: Фикс дикого вращения камеры на 360 градусов!
+            camera.rotation.order = 'YXZ'; 
             scene.add(camera);
 
-            // Освещение: Общий тусклый свет уровня
-            const ambientLight = new THREE.AmbientLight('#2c2a1e', 0.6);
+            // Флуоресцентное общее освещение
+            const ambientLight = new THREE.AmbientLight('#a39d6c', 0.8);
             scene.add(ambientLight);
 
-            // Фонарик игрока (Тот самый крутой интерактивный элемент)
-            flashlight = new THREE.SpotLight('#ffeaa7', 2, 25, Math.PI / 4, 0.5, 1);
-            flashlight.position.set(0, 0, 0);
-            flashlight.castShadow = false;
+            // Фонарик на F
+            flashlight = new THREE.SpotLight('#fffbd6', 2.5, 20, Math.PI / 4.5, 0.6, 1.2);
             camera.add(flashlight);
             camera.add(flashlight.target);
             flashlight.target.position.set(0, 0, -1);
 
-            // Рендерер
-            renderer = new THREE.WebGLRenderer({ antialias: false }); // Отключаем сглаживание для олдскульного вида
+            renderer = new THREE.WebGLRenderer({ antialias: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // Слушатели управления
             window.addEventListener('resize', onWindowResize);
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
             document.addEventListener('mousemove', onMouseMove);
             
-            // Клик по экрану блокирует курсор мыши
             document.body.addEventListener('click', () => {
                 if(isPlaying) document.body.requestPointerLock();
             });
 
-            // Создаем монстров вокруг
-            spawnMonsters();
+            createScaryMonster();
         }
 
-        // --- Логика генерации мира вокруг игрока (Оптимизация чанков) ---
-        function updateInfiniteMaze() {
+        // Бесконечный рендеринг блоков вокруг игрока
+        function updateChunks() {
             let pGridX = Math.floor(playerPos.x / CELL_SIZE);
             let pGridZ = Math.floor(playerPos.z / CELL_SIZE);
-
             const activeKeys = new Set();
 
             const wallGeo = new THREE.BoxGeometry(CELL_SIZE, 3, CELL_SIZE);
-            const wallMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.8 });
-
+            const wallMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.7 });
             const floorGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
             const floorMat = new THREE.MeshStandardMaterial({ map: carpetTexture, roughness: 0.9 });
-
             const ceilGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
-            const ceilMat = new THREE.MeshStandardMaterial({ map: ceilingTexture, roughness: 0.5 });
-            // Материал для светящихся ламп
+            const ceilMat = new THREE.MeshStandardMaterial({ map: ceilingTexture, roughness: 0.4 });
             const lampMat = new THREE.MeshBasicMaterial({ color: '#fffebd' });
 
-            // Пробегаем по видимой области вокруг игрока
             for (let x = pGridX - CHUNK_RADIUS; x <= pGridX + CHUNK_RADIUS; x++) {
                 for (let z = pGridZ - CHUNK_RADIUS; z <= pGridZ + CHUNK_RADIUS; z++) {
                     let key = `${x},${z}`;
@@ -370,31 +228,22 @@
                     if (!spawnedWalls.has(key)) {
                         let group = new THREE.Group();
 
-                        // 1. Пол
                         let floor = new THREE.Mesh(floorGeo, floorMat);
                         floor.rotation.x = -Math.PI / 2;
                         floor.position.set(x * CELL_SIZE, 0, z * CELL_SIZE);
                         group.add(floor);
 
-                        // 2. Потолок или Лампа
-                        let isLamp = (Math.abs(x) % 3 === 0 && Math.abs(z) % 3 === 0 && !checkStructure(x,z));
-                        let ceilMesh;
-                        if (isLamp) {
-                            ceilMesh = new THREE.Mesh(ceilGeo, lampMat);
-                            // Добавим точечный свет от ламп для реалистичности
-                            if(Math.random() > 0.3) { // Немного рандома, чтобы не перегружать GPU
-                                let lampLight = new THREE.PointLight('#ffeaa7', 0.2, 8);
-                                lampLight.position.set(0, -0.1, 0);
-                                ceilMesh.add(lampLight);
-                            }
-                        } else {
-                            ceilMesh = new THREE.Mesh(ceilGeo, ceilMat);
+                        let isLamp = (Math.abs(x) % 4 === 0 && Math.abs(z) % 4 === 0 && !checkStructure(x,z));
+                        let ceilMesh = new THREE.Mesh(ceilGeo, isLamp ? lampMat : ceilMat);
+                        if(isLamp) {
+                            let lampLight = new THREE.PointLight('#fffaa6', 0.25, 7);
+                            lampLight.position.set(0, -0.1, 0);
+                            ceilMesh.add(lampLight);
                         }
                         ceilMesh.rotation.x = Math.PI / 2;
                         ceilMesh.position.set(x * CELL_SIZE, 3, z * CELL_SIZE);
                         group.add(ceilMesh);
 
-                        // 3. Стена (если есть структура)
                         if (checkStructure(x, z)) {
                             let wall = new THREE.Mesh(wallGeo, wallMat);
                             wall.position.set(x * CELL_SIZE, 1.5, z * CELL_SIZE);
@@ -407,7 +256,6 @@
                 }
             }
 
-            // Удаляем старые чанки, которые далеко, для идеальной оптимизации
             for (let [key, mesh] of spawnedWalls.entries()) {
                 if (!activeKeys.has(key)) {
                     scene.remove(mesh);
@@ -416,105 +264,185 @@
             }
         }
 
-        // --- Реалистичный синтез звука (Web Audio API) ---
-        function startAmbientAudio() {
-            try {
-                let AudioContext = window.AudioContext || window.webkitAudioContext;
-                let audioCtx = new AudioContext();
-
-                // Низкочастотный гул ламп (60 Гц + 120 Гц гармоники)
-                let osc = audioCtx.createOscillator();
-                let gainNode = audioCtx.createGain();
-                let filter = audioCtx.createBiquadFilter();
-
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(60, audioCtx.currentTime);
-                
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(150, audioCtx.currentTime);
-
-                gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime); // Очень тихий фон
-
-                osc.connect(filter);
-                filter.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                osc.start();
-            } catch(e) {
-                console.log("Аудио контекст не поддерживается блокировкой браузера.");
-            }
-        }
-
-        // --- Обработка коллизий (Minecraft-стиль скольжения по стенам) ---
+        // Физика столкновений (Коллизии)
         function checkCollision(targetPos) {
-            let buffer = 0.4; // Радиус физического тела игрока
-            let checkPoints = [
-                {x: targetPos.x - buffer, z: targetPos.z - buffer},
-                {x: targetPos.x + buffer, z: targetPos.z - buffer},
-                {x: targetPos.x - buffer, z: targetPos.z + buffer},
-                {x: targetPos.x + buffer, z: targetPos.z + buffer}
+            let radius = 0.35;
+            let points = [
+                {x: targetPos.x - radius, z: targetPos.z - radius},
+                {x: targetPos.x + radius, z: targetPos.z - radius},
+                {x: targetPos.x - radius, z: targetPos.z + radius},
+                {x: targetPos.x + radius, z: targetPos.z + radius}
             ];
-
-            for (let pt of checkPoints) {
-                let gx = Math.round(pt.x / CELL_SIZE);
-                let gz = Math.round(pt.z / CELL_SIZE);
-                if (checkStructure(gx, gz)) {
-                    return true; // Столкновение со стеной!
-                }
+            for (let pt of points) {
+                if (checkStructure(Math.round(pt.x / CELL_SIZE), Math.round(pt.z / CELL_SIZE))) return true;
             }
             return false;
         }
 
-        // --- Управление клавиатурой и мышью ---
-        function onKeyDown(e) {
-            if(!isPlaying) return;
-            switch (e.code) {
-                case 'KeyW': moveForward = true; break;
-                case 'KeyS': moveBackward = true; break;
-                case 'KeyA': moveLeft = true; break;
-                case 'KeyD': moveRight = true; break;
-                case 'ShiftLeft': isSprinting = true; break;
-                case 'KeyF': // Включение / Выключение фонарика
-                    flashlight.visible = !flashlight.visible;
-                    break;
+        // Создание ОДНОГО самого страшного аморфного монстра (Бактерия/Провода)
+        function createScaryMonster() {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshBasicMaterial({ color: '#030303' });
+            
+            // Тонкое вытянутое хаотичное тело из палок
+            const spineGeo = new THREE.CylinderGeometry(0.04, 0.04, 2.4);
+            const spine = new THREE.Mesh(spineGeo, mat);
+            spine.position.y = 1.2;
+            group.add(spine);
+
+            // Крючковатые длинные конечности
+            for(let i = 0; i < 4; i++) {
+                const limbGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.6);
+                const limb = new THREE.Mesh(limbGeo, mat);
+                limb.position.set(Math.sin(i)*0.2, 1.0, Math.cos(i)*0.2);
+                limb.rotation.z = 0.4 * (i % 2 === 0 ? 1 : -1);
+                group.add(limb);
+            }
+
+            monsterMesh = group;
+            // Спавним его подальше в глубине лабиринта
+            monsterMesh.position.set(24, 0, 24);
+            scene.add(monsterMesh);
+        }
+
+        function updateMonsterLogic(delta) {
+            if(!monsterMesh) return;
+            let dir = new THREE.Vector3().subVectors(playerPos, monsterMesh.position);
+            dir.y = 0;
+            let dist = dir.length();
+
+            // Монстр активируется только если игрок забрел в его зону (редкие скримеры)
+            if (dist < 30) {
+                dir.normalize();
+                let nextPos = monsterMesh.position.clone().addScaledVector(dir, monsterSpeed * delta);
+                
+                if (!checkStructure(Math.round(nextPos.x/CELL_SIZE), Math.round(nextPos.z/CELL_SIZE))) {
+                    monsterMesh.position.copy(nextPos);
+                }
+                monsterMesh.lookAt(playerPos.x, monsterMesh.position.y, playerPos.z);
+
+                if (dist < 0.7) triggerJumpscare();
+            } else {
+                // Если далеко — медленно блуждает кругами
+                monsterMesh.position.x += Math.sin(clock.getElapsedTime() * 0.2) * 0.01;
             }
         }
 
-        document.getElementById('start-btn').addEventListener('click', () => {
-            const inputName = document.getElementById('nickname-input').value.trim();
-            if(inputName) myName = inputName;
-            document.getElementById('player-name').innerText = "Игрок: " + myName;
+        function triggerJumpscare() {
+            isPlaying = false;
+            document.exitPointerLock();
+            document.getElementById('jumpscare').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('jumpscare').style.display = 'none';
+                playerPos.set(0, 1.5, 0);
+                camera.position.copy(playerPos);
+                monsterMesh.position.set(20 + Math.random()*20, 0, 20 + Math.random()*20);
+                isPlaying = true;
+                document.body.requestPointerLock();
+            }, 2000);
+        }
 
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            document.getElementById('crosshair').style.display = 'block';
-            document.getElementById('instructions').style.display = 'block';
-            
-            isPlaying = true;
-            document.body.requestPointerLock();
-            
-            // Запуск аудио
-            startAmbientAudio();
-        });
+        // --- Глобальный Интернет Мультиплеер через бесплатный MQTT сервер ---
+        function initGlobalMultiplayer() {
+            // Подключаемся к бесплатному глобальному брокеру HiveMQ через защищенные веб-сокеты
+            const brokerUri = "wss://broker.hivemq.com:8884/mqtt"; 
+            mqttClient = new Paho.MQTT.Client(brokerUri, "sub_back_" + Math.random().toString(36).substr(2, 5));
+
+            mqttClient.onMessageArrived = (message) => {
+                try {
+                    let data = JSON.parse(message.payloadString);
+                    if (data.id === myId) return;
+
+                    if (data.type === 'move') {
+                        if (!remotePlayers.has(data.id)) {
+                            // Создаем игрока в виде КАПСУЛЫ
+                            const capGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.6, 8);
+                            const capMat = new THREE.MeshStandardMaterial({ color: '#900000', roughness: 0.5 }); // Бордовые капсулы коллег
+                            const mesh = new THREE.Mesh(capGeo, capMat);
+                            scene.add(mesh);
+                            remotePlayers.set(data.id, { mesh: mesh, lastSeen: Date.now() });
+                        } else {
+                            let rData = remotePlayers.get(data.id);
+                            rData.mesh.position.set(data.x, data.y - 0.4, data.z);
+                            rData.lastSeen = Date.now();
+                        }
+                    }
+                } catch(e){}
+            };
+
+            mqttClient.connect({
+                onSuccess: () => {
+                    mqttClient.subscribe("backrooms/level0/global_game_v2");
+                    // Каждые 50мс шлем свои координаты в глобальный интернет
+                    setInterval(() => {
+                        if (!isPlaying) return;
+                        let msg = new Paho.MQTT.Message(JSON.stringify({
+                            type: 'move', id: myId, name: myName,
+                            x: playerPos.x, y: playerPos.y, z: playerPos.z
+                        }));
+                        msg.destinationName = "backrooms/level0/global_game_v2";
+                        mqttClient.send(msg);
+                    }, 50);
+                },
+                useSSL: true
+            });
+
+            // Очистка игроков, которые вышли
+            setInterval(() => {
+                let now = Date.now();
+                for (let [id, data] of remotePlayers.entries()) {
+                    if (now - data.lastSeen > 3000) {
+                        scene.remove(data.mesh);
+                        remotePlayers.delete(id);
+                    }
+                }
+                document.getElementById('online-count').innerText = "В игре: " + (remotePlayers.size + 1);
+            }, 2000);
+        }
+
+        // Синтез страшного гула ламп (Web Audio API)
+        function startAmbientSound() {
+            try {
+                let ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = ctx.createOscillator();
+                let gain = ctx.createGain();
+                let filter = ctx.createBiquadFilter();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(55, ctx.currentTime);
+                filter.type = 'lowpass'; filter.frequency.setValueAtTime(120, ctx.currentTime);
+                gain.gain.setValueAtTime(0.03, ctx.currentTime); // Тихий монотонный гул
+                osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+                osc.start();
+            }catch(e){}
+        }
+
+        // --- Управление ---
+        function onKeyDown(e) {
+            if(!isPlaying) return;
+            if (e.code === 'KeyW') moveForward = true;
+            if (e.code === 'KeyS') moveBackward = true;
+            if (e.code === 'KeyA') moveLeft = true;
+            if (e.code === 'KeyD') moveRight = true;
+            if (e.code === 'ShiftLeft') isSprinting = true;
+            if (e.code === 'KeyF') flashlight.visible = !flashlight.visible;
+        }
 
         function onKeyUp(e) {
-            switch (e.code) {
-                case 'KeyW': moveForward = false; break;
-                case 'KeyS': moveBackward = false; break;
-                case 'KeyA': moveLeft = false; break;
-                case 'KeyD': moveRight = false; break;
-                case 'ShiftLeft': isSprinting = false; break;
-            }
+            if (e.code === 'KeyW') moveForward = false;
+            if (e.code === 'KeyS') moveBackward = false;
+            if (e.code === 'KeyA') moveLeft = false;
+            if (e.code === 'KeyD') moveRight = false;
+            if (e.code === 'ShiftLeft') isSprinting = false;
         }
 
         function onMouseMove(e) {
             if (document.pointerLockElement !== document.body) return;
             
-            yaw -= e.movementX * 0.0025;
-            pitch -= e.movementY * 0.0025;
+            yaw -= e.movementX * 0.0022;
+            pitch -= e.movementY * 0.0022;
             
-            pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, pitch));
+            // Строгий зажим углов, чтобы камера не переворачивалась на 360 по вертикали
+            pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch));
             
-            camera.rotation.set(0, 0, 0);
             camera.rotation.y = yaw;
             camera.rotation.x = pitch;
         }
@@ -525,154 +453,32 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- Физика монстров (Враждебные сущности) ---
-        function spawnMonsters() {
-            // Создаем 3-х жутких монстров (Сущностей)
-            const monsterMat = new THREE.MeshBasicMaterial({ color: '#0a0a0a' }); // Черные силуэты
-            const bodyGeo = new THREE.CylinderGeometry(0.2, 0.05, 2.2, 6);
+        document.getElementById('start-btn').addEventListener('click', () => {
+            let name = document.getElementById('nickname-input').value.trim();
+            if(name) myName = name;
+            document.getElementById('player-name').innerText = "Игрок: " + myName;
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('crosshair').style.display = 'block';
+            document.getElementById('instructions').style.display = 'block';
+            
+            isPlaying = true;
+            document.body.requestPointerLock();
+            
+            startAmbientSound();
+            initGlobalMultiplayer();
+        });
 
-            for(let i=0; i<4; i++) {
-                let m = new THREE.Mesh(bodyGeo, monsterMat);
-                // Спавним их на некотором расстоянии от центра
-                let angle = Math.random() * Math.PI * 2;
-                let dist = 15 + Math.random() * 20;
-                m.position.set(Math.cos(angle)*dist, 1.1, Math.sin(angle)*dist);
-                scene.add(m);
-                monsters.push(m);
-            }
-        }
-
-        function updateMonsters(delta) {
-            monsters.forEach(m => {
-                // Вектор к игроку
-                let dir = new THREE.Vector3().subVectors(playerPos, m.position);
-                dir.y = 0;
-                let dist = dir.length();
-
-                // Если игрок близко, монстр медленно и жутко идет на него
-                if (dist < 22) {
-                    dir.normalize();
-                    let speed = 2.0; // Скорость монстра
-                    let nextPos = m.position.clone().addScaledVector(dir, speed * delta);
-                    
-                    // Проверка коллизий монстра со стенами
-                    let gx = Math.round(nextPos.x / CELL_SIZE);
-                    let gz = Math.round(nextPos.z / CELL_SIZE);
-                    if (!checkStructure(gx, gz)) {
-                        m.position.copy(nextPos);
-                    }
-
-                    // Скример при касании
-                    if (dist < 0.8) {
-                        triggerJumpscare();
-                    }
-                }
-            });
-        }
-
-        function triggerJumpscare() {
-            isPlaying = false;
-            document.exitPointerLock();
-            const js = document.getElementById('jumpscare');
-            js.style.display = 'flex';
-            setTimeout(() => {
-                js.style.display = 'none';
-                // Респавн в центр
-                playerPos.set(0, 1.6, 0);
-                camera.position.copy(playerPos);
-                isPlaying = true;
-                document.body.requestPointerLock();
-            }, 1500);
-        }
-
-        // --- Реализация мультиплеера (Вкладки / Окна) ---
-        // Отправка наших координат другим игрокам
-        setInterval(() => {
-            if (!isPlaying) return;
-            mpChannel.postMessage({
-                type: 'update',
-                id: myId,
-                name: myName,
-                pos: { x: playerPos.x, y: playerPos.y, z: playerPos.z }
-            });
-        }, 40); // 25 FPS синхронизация пакетов
-
-        // Слушаем чужие пакеты
-        mpChannel.onmessage = (e) => {
-            if (e.data.type === 'update') {
-                let pId = e.data.id;
-                if (pId === myId) return;
-
-                if (!remotePlayers.has(pId)) {
-                    // Создаем 3D-модель игрока в виде капсулы
-                    const capGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.6, 8);
-                    const capMat = new THREE.MeshStandardMaterial({ color: '#ff7675', roughness: 0.5 }); // Розовая капсула
-                    const mesh = new THREE.Mesh(capGeo, capMat);
-                    mesh.position.set(e.data.pos.x, e.data.pos.y, e.data.pos.z);
-                    scene.add(mesh);
-
-                    remotePlayers.set(pId, {
-                        mesh: mesh,
-                        lastUpdate: Date.now()
-                    });
-                } else {
-                    let pData = remotePlayers.get(pId);
-                    pData.mesh.position.set(e.data.pos.x, e.data.pos.y - 0.4, e.data.pos.z); // Коррекция высоты
-                    pData.lastUpdate = Date.now();
-                }
-
-                // Обновляем счетчик онлайна на странице
-                document.getElementById('online-count').innerText = "В сети на этой машине: " + (remotePlayers.size + 1);
-            }
-        };
-
-        // Удаление отключившихся (неактивных) игроков
-        function cleanDeadPlayers() {
-            let now = Date.now();
-            for (let [id, data] of remotePlayers.entries()) {
-                if (now - data.lastUpdate > 2000) { // Если нет вестей 2 секунды
-                    scene.remove(data.mesh);
-                    remotePlayers.delete(id);
-                }
-            }
-            document.getElementById('online-count').innerText = "В сети на этой машине: " + (remotePlayers.size + 1);
-        }
-        setInterval(cleanDeadPlayers, 3000);
-
-        // Имитация ботов, если игрок один (Для теста)
-        let botSpawned = false;
-        function spawnSimulatedBots() {
-            if(remotePlayers.size === 0 && !botSpawned) {
-                botSpawned = true;
-                // Каждые пару секунд шлем фейковые движения ботов-капсул
-                setInterval(() => {
-                    if(remotePlayers.size === 0) {
-                        let t = Date.now() * 0.001;
-                        mpChannel.postMessage({
-                            type: 'update', id: 'bot_1', name: 'Симуляция_Капсула',
-                            pos: { x: Math.sin(t)*8 + 4, y: 1.6, z: Math.cos(t)*8 + 4 }
-                        });
-                    }
-                }, 50);
-            }
-        }
-        setTimeout(spawnSimulatedBots, 5000);
-
-
-        // --- Основной Игровой Цикл (Loop) ---
+        // --- Главный игровой цикл ---
         function animate() {
             requestAnimationFrame(animate);
-
             let delta = clock.getDelta();
-            // Ограничение слишком больших скачков кадров
-            if (delta > 0.1) delta = 0.1; 
+            if (delta > 0.1) delta = 0.1;
 
             if (isPlaying) {
-                // 1. Движение и Скорость
-                let currentSpeed = isSprinting ? SPEED_SPRINT : SPEED_WALK;
+                let speed = isSprinting ? SPEED_SPRINT : SPEED_WALK;
                 playerVelocity.set(0, 0, 0);
 
-                // Направление движения относительно взгляда камеры
                 let forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
                 let right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
 
@@ -682,9 +488,8 @@
                 if (moveLeft) playerVelocity.add(right.clone().negate());
 
                 if (playerVelocity.lengthSq() > 0) {
-                    playerVelocity.normalize().multiplyScalar(currentSpeed * delta);
+                    playerVelocity.normalize().multiplyScalar(speed * delta);
                     
-                    // Покомпонентная проверка коллизий для плавного скольжения по стенам
                     let nextX = playerPos.clone(); nextX.x += playerVelocity.x;
                     if (!checkCollision(nextX)) playerPos.x = nextX.x;
 
@@ -692,23 +497,16 @@
                     if (!checkCollision(nextZ)) playerPos.z = nextZ.z;
                 }
 
-                // Обновляем позицию камеры
                 camera.position.copy(playerPos);
-
-                // 2. Генерация карты вокруг игрока
-                updateInfiniteMaze();
-
-                // 3. Обновление монстров
-                updateMonsters(delta);
+                updateChunks();
+                updateMonsterLogic(delta);
             }
 
             renderer.render(scene, camera);
         }
 
-        // Запуск
-        init();
+        init3D();
         animate();
-
     </script>
 </body>
 </html>
