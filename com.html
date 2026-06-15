@@ -3,578 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Voice & Screen Chat</title>
+    <title>Retro Craft Racer 3D</title>
     <style>
-        :root {
-            --bg-main: #1e1f22;
-            --bg-sidebar: #2b2d31;
-            --bg-card: #313338;
-            --bg-input: #1e1f22;
-            --accent: #5865f2;
-            --accent-hover: #4752c4;
-            --text-main: #dbdee1;
-            --text-muted: #949ba4;
-            --danger: #f23f43;
-            --success: #23a55a;
-        }
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-main); color: var(--text-main);
+        body {
+            margin: 0;
             overflow: hidden;
+            background-color: #1a1a2e;
+            font-family: 'Courier New', monospace;
+            user-select: none;
         }
-
-        #login-screen {
-            position: absolute; width: 100%; height: 100%;
-            background-color: var(--bg-main); z-index: 100;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 3px 3px 0px #000;
+            line-height: 1.5;
+            z-index: 10;
         }
-        .login-box {
-            background-color: var(--bg-sidebar); padding: 40px;
-            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            text-align: center; width: 320px;
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffff00;
+            font-size: 18px;
+            text-shadow: 2px 2px 0px #000;
+            text-align: center;
+            z-index: 10;
         }
-        .login-box h2 { margin-top: 0; color: #fff; margin-bottom: 20px; }
-        .login-box input {
-            width: 100%; padding: 12px; border: none; background-color: var(--bg-input);
-            color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 1rem;
-            margin-bottom: 20px; outline: none; text-align: center;
-        }
-        .login-box button {
-            width: 100%; padding: 12px; border: none; background-color: var(--accent);
-            color: #fff; font-size: 1rem; font-weight: bold; border-radius: 4px;
-            cursor: pointer; transition: background 0.2s;
-        }
-        .login-box button:hover { background-color: var(--accent-hover); }
-
-        #app-container {
-            display: flex; width: 100%; height: 100%; display: none;
-        }
-
-        .sidebar {
-            width: 260px; background-color: var(--bg-sidebar);
-            display: flex; flex-direction: column; justify-content: space-between;
-            border-right: 1px solid rgba(0,0,0,0.2);
-        }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.2); }
-        .sidebar-header h3 { margin: 0; font-size: 1.1rem; color: #fff; }
-        .user-list { padding: 15px; flex-grow: 1; overflow-y: auto; }
-        .user-item {
-            display: flex; align-items: center; padding: 8px 10px;
-            margin-bottom: 5px; border-radius: 4px; background: rgba(255,255,255,0.03);
-        }
-        .user-avatar {
-            width: 32px; height: 32px; background-color: var(--accent);
-            border-radius: 50%; display: flex; justify-content: center;
-            align-items: center; font-weight: bold; color: #fff; margin-right: 10px;
-        }
-        .user-info { flex-grow: 1; font-size: 0.95rem; }
-        .user-status-icons { display: flex; gap: 5px; }
-
-        .controls-panel {
-            padding: 15px; background-color: rgba(0,0,0,0.15);
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        .btn-group { display: flex; gap: 8px; }
-        .control-btn {
-            flex: 1; padding: 10px; border: none; border-radius: 4px;
-            font-weight: bold; cursor: pointer; display: flex; justify-content: center;
-            align-items: center; gap: 5px; font-size: 0.85rem; transition: background 0.2s;
-            color: #fff; background-color: #4e5058;
-        }
-        .control-btn:hover { background-color: #6d6f78; }
-        .control-btn.active { background-color: var(--success); }
-        .control-btn.active:hover { background-color: #1a8144; }
-        .control-btn.danger { background-color: var(--danger); }
-        .control-btn.danger:hover { background-color: #bc3135; }
-
-        .main-content {
-            flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-main);
-        }
-
-        .streams-grid {
-            flex-grow: 1; padding: 20px; display: flex; flex-wrap: wrap;
-            gap: 15px; overflow-y: auto; align-content: flex-start;
-        }
-        .peer-card {
-            background-color: var(--bg-card); border-radius: 8px;
-            width: 240px; height: 160px; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; position: relative;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid transparent;
-            transition: border-color 0.15s, box-shadow 0.15s;
-        }
-        .peer-card.speaking {
-            border-color: var(--success);
-            box-shadow: 0 0 15px rgba(35, 165, 90, 0.4);
-        }
-        .peer-card .avatar-big {
-            width: 64px; height: 64px; background-color: var(--accent);
-            border-radius: 50%; display: flex; justify-content: center;
-            align-items: center; font-size: 1.5rem; font-weight: bold; color: #fff;
-            margin-bottom: 10px;
-        }
-        .peer-card .name { font-weight: bold; font-size: 1rem; color: #fff; }
-        .peer-card .mic-indicator {
-            position: absolute; bottom: 10px; right: 10px;
-            font-size: 0.8rem; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px;
-        }
-
-        #screen-share-area {
-            height: 50%; background-color: #000; display: none;
-            position: relative; border-bottom: 2px solid rgba(0,0,0,0.3);
-        }
-        #screen-video { width: 100%; height: 100%; object-fit: contain; }
-        .screen-label {
-            position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7);
-            padding: 5px 12px; border-radius: 4px; font-size: 0.9rem; font-weight: bold;
-        }
-
-        .chat-area {
-            height: 200px; background-color: var(--bg-sidebar);
-            display: flex; flex-direction: column; border-top: 1px solid rgba(0,0,0,0.2);
-        }
-        .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; font-size: 0.95rem; }
-        .msg { margin-bottom: 6px; line-height: 1.3; }
-        .msg-author { font-weight: bold; color: var(--accent); margin-right: 5px; }
-        .chat-input-wrapper { padding: 10px 15px; display: flex; gap: 10px; }
-        .chat-input-wrapper input {
-            flex-grow: 1; padding: 10px; border: none; background-color: var(--bg-input);
-            color: #fff; border-radius: 4px; outline: none; font-family: inherit;
-        }
-        .chat-input-wrapper button {
-            padding: 10px 20px; border: none; background-color: var(--accent);
-            color: #fff; font-weight: bold; border-radius: 4px; cursor: pointer;
-        }
-        .chat-input-wrapper button:hover { background-color: var(--accent-hover); }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <!-- Подключаем Three.js для работы с 3D графикой -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-
-    <div id="login-screen">
-        <div class="login-box">
-            <h2>Войс Чат & Демка</h2>
-            <input type="text" id="nickname-input" placeholder="Введите ваш ник" maxlength="14" value="Пользователь">
-            <button id="join-btn">ПОДКЛЮЧИТЬСЯ</button>
-        </div>
+    <div id="ui">
+        СКОРОСТЬ: <span id="speed">0</span> КМ/Ч<br>
+        ДИСТАНЦИЯ: <span id="distance">0</span> М
     </div>
-
-    <div id="app-container">
-        <div class="sidebar">
-            <div>
-                <div class="sidebar-header">
-                    <h3>В сети комнаты (1):</h3>
-                </div>
-                <div class="user-list" id="users-container"></div>
-            </div>
-
-            <div class="controls-panel">
-                <div class="btn-group">
-                    <button class="control-btn active" id="toggle-mic-btn">🎙 Микро</button>
-                    <button class="control-btn active" id="toggle-audio-btn">🔊 Звук</button>
-                </div>
-                <button class="control-btn" id="share-screen-btn">🖥 Включить демку</button>
-                <button class="control-btn danger" id="leave-btn">Отключиться</button>
-            </div>
-        </div>
-
-        <div class="main-content">
-            <div id="screen-share-area">
-                <video id="screen-video" autoplay playsinline muted></video>
-                <div class="screen-label" id="screen-user-label">Демонстрация экрана: Никто</div>
-            </div>
-
-            <div class="streams-grid" id="cards-container"></div>
-
-            <div class="chat-area">
-                <div class="chat-messages" id="chat-msg-container">
-                    <div class="msg"><span class="msg-author">Система:</span>Добро пожаловать в голосовой чат!</div>
-                </div>
-                <div class="chat-input-wrapper">
-                    <input type="text" id="chat-input" placeholder="Написать сообщение друзьям..." maxlength="150">
-                    <button id="chat-send-btn">Отправить</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div id="instructions">УПРАВЛЕНИЕ: СТРЕЛКИ или WASD</div>
 
     <script>
-        const MQTT_BROKER = "broker.hivemq.com";
-        const MQTT_PORT = 8884;
-        const TOPIC_ROOM = "krkshs/voicechat/global_room_v3";
+        // --- НАСТРОЙКА СЦЕНЫ И КАМЕРЫ ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        // Туман для плавного ретро-горизонта
+        scene.fog = new THREE.FogExp2(0x1a1a2e, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: false }); // Выключаем сглаживание для пиксельного стиля
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // --- ОСВЕЩЕНИЕ ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.75);
+        dirLight.position.set(15, 30, 15);
+        scene.add(dirLight);
+
+        // --- ИГРОК (МАШИНКА ИЗ БЛОКОВ) ---
+        const car = new THREE.Group();
         
-        const rtcConfig = {
-            iceServers: [
-                { urls: "stun:stun.l.google.com:19302" },
-                { urls: "stun:stun1.l.google.com:19302" }
-            ]
-        };
+        // Главный кузов
+        const bodyGeom = new THREE.BoxGeometry(1.8, 0.6, 3.4);
+        const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
+        const carBody = new THREE.Mesh(bodyGeom, bodyMat);
+        carBody.position.y = 0.5;
+        car.add(carBody);
 
-        let myId = "usr_" + Math.random().toString(36).substr(2, 9);
-        let myName = "Аноним";
-        let mqttClient;
-        
-        let localAudioStream = null;
-        let localScreenStream = null;
-        
-        let micEnabled = true;
-        let audioEnabled = true;
-        let isSharingScreen = false;
+        // Кабина (стекло/крыша)
+        const cabinGeom = new THREE.BoxGeometry(1.4, 0.6, 1.8);
+        const cabinMat = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
+        const cabin = new THREE.Mesh(cabinGeom, cabinMat);
+        cabin.position.set(0, 1.1, -0.2);
+        car.add(cabin);
 
-        const peers = new Map();
+        // Колеса
+        const wheelGeom = new THREE.BoxGeometry(0.4, 0.7, 0.7);
+        const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+        const wheels = [];
+        const wheelPositions = [
+            [1, 0.35, 1], [-1, 0.35, 1],
+            [1, 0.35, -1], [-1, 0.35, -1]
+        ];
 
-        const loginScreen = document.getElementById("login-screen");
-        const appContainer = document.getElementById("app-container");
-        const nicknameInput = document.getElementById("nickname-input");
-        const usersContainer = document.getElementById("users-container");
-        const cardsContainer = document.getElementById("cards-container");
-        const chatMsgContainer = document.getElementById("chat-msg-container");
-        const chatInput = document.getElementById("chat-input");
+        wheelPositions.forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeom, wheelMat);
+            wheel.position.set(pos[0], pos[1], pos[2]);
+            car.add(wheel);
+            wheels.push(wheel);
+        });
 
-        // --- 1. АВТОРИЗАЦИЯ И СТАРТ ПОТОКОВ ---
-        document.getElementById("join-btn").addEventListener("click", async () => {
-            if (nicknameInput.value.trim() !== "") {
-                myName = nicknameInput.value.trim();
-            }
+        scene.add(car);
 
-            try {
-                localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            } catch (err) {
-                alert("Ошибка доступа к микрофону! Без него голосовой чат не запустится. Убедитесь, что дали разрешение в браузере.");
-                return;
-            }
+        // --- ДИНАМИКА И ФИЗИКА ---
+        let speed = 0;
+        const maxSpeed = 1.3;
+        const accel = 0.012;
+        const deccel = 0.008;
+        let carX = 0;
 
-            loginScreen.style.display = "none";
-            appContainer.style.display = "flex";
+        const keys = { Forward: false, Backward: false, Left: false, Right: false };
 
-            updateLocalUserCard();
-            initSignaling();
-        }); // <-- ТУТ БЫЛ ФАТАЛЬНЫЙ КОСЯК, ТЕПЕРЬ ВСЁ ЗАКРЫТО ПРАВИЛЬНО!
+        // --- ПРОЦЕДУРНАЯ ГЕНЕРАЦИЯ МИРА (БЛОКИ) ---
+        const obstacles = [];
+        const segments = [];
+        let lastSegmentZ = 0;
+        const segmentLength = 8;
+        const maxSegments = 25;
 
-        // --- 2. СИГНАЛИНГ СЕРВЕР ЧЕРЕЗ ВЕБСОКЕТЫ ---
-        function initSignaling() {
-            mqttClient = new Paho.MQTT.Client(`wss://${MQTT_BROKER}:${MQTT_PORT}/mqtt`, "client_" + myId);
+        function createSegment(z) {
+            const segmentGroup = new THREE.Group();
+            const isEven = Math.floor(Math.abs(z) / segmentLength) % 2 === 0;
 
-            mqttClient.onMessageArrived = async (message) => {
-                try {
-                    const data = JSON.parse(message.payloadString);
-                    if (data.senderId === myId) return;
+            // Дорожное полотно (чередующиеся цвета)
+            const roadColor = isEven ? 0x2d3436 : 0x353b48;
+            const roadGeom = new THREE.BoxGeometry(12, 0.2, segmentLength);
+            const roadMat = new THREE.MeshLambertMaterial({ color: roadColor });
+            const road = new THREE.Mesh(roadGeom, roadMat);
+            road.position.set(0, -0.1, z - segmentLength / 2);
+            segmentGroup.add(road);
 
-                    if (data.type === "chat") {
-                        appendChatMessage(data.senderName, data.text);
-                        return;
-                    }
-
-                    if (data.type === "leave") {
-                        removePeer(data.senderId);
-                        return;
-                    }
-
-                    if (data.type === "status_update") {
-                        const peer = peers.get(data.senderId);
-                        if (peer) {
-                            peer.micEnabled = data.micEnabled;
-                            const statusEl = document.getElementById(`mic-status-${data.senderId}`);
-                            if(statusEl) statusEl.innerText = data.micEnabled ? "🎙 Вкл" : "🚫 Мут";
-                        }
-                        return;
-                    }
-
-                    if (data.type === "join") {
-                        await createPeerConnection(data.senderId, data.senderName, true);
-                    } else if (data.targetId === myId) {
-                        if (data.type === "offer") {
-                            await createPeerConnection(data.senderId, data.senderName, false);
-                            const peer = peers.get(data.senderId);
-                            await peer.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                            const answer = await peer.pc.createAnswer();
-                            await peer.pc.setLocalDescription(answer);
-                            sendSignal({ type: "answer", targetId: data.senderId, sdp: answer });
-                        } else if (data.type === "answer") {
-                            const peer = peers.get(data.senderId);
-                            if (peer) {
-                                await peer.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                            }
-                        } else if (data.type === "candidate") {
-                            const peer = peers.get(data.senderId);
-                            if (peer && data.candidate) {
-                                try {
-                                    await peer.pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-                                } catch(e){}
-                            }
-                        }
-                    }
-                } catch (e) { console.error(e); }
-            };
-
-            mqttClient.connect({
-                onSuccess: () => {
-                    mqttClient.subscribe(TOPIC_ROOM);
-                    sendSignal({ type: "join", senderName: myName });
-                },
-                useSSL: true
-            });
-        }
-
-        function sendSignal(payload) {
-            payload.senderId = myId;
-            payload.senderName = myName;
-            const message = new Paho.MQTT.Message(JSON.stringify(payload));
-            message.destinationName = TOPIC_ROOM;
-            if(mqttClient && mqttClient.isConnected()) mqttClient.send(message);
-        }
-
-        // --- 3. СОЗДАНИЕ ПРЯМОГО P2P СТРИМА ЧЕРЕЗ ИНТЕРНЕТ (WebRTC) ---
-        async function createPeerConnection(peerId, peerName, isOffer) {
-            if (peers.has(peerId)) return;
-
-            const pc = new RTCPeerConnection(rtcConfig);
-            const peerInfo = { pc: pc, name: peerName, micEnabled: true, stream: null };
-            peers.set(peerId, peerInfo);
-
-            localAudioStream.getTracks().forEach(track => {
-                pc.addTrack(track, localAudioStream);
-            });
-
-            if (localScreenStream) {
-                localScreenStream.getTracks().forEach(track => {
-                    pc.addTrack(track, localScreenStream);
-                });
-            }
-
-            pc.onicecandidate = (event) => {
-                if (event.candidate) {
-                    sendSignal({ type: "candidate", targetId: peerId, candidate: event.candidate });
-                }
-            };
-
-            pc.ontrack = (event) => {
-                const remoteStream = event.streams[0];
-                if (event.track.kind === "audio") {
-                    if (!document.getElementById(`audio-${peerId}`)) {
-                        const audioEl = document.createElement("audio");
-                        audioEl.id = `audio-${peerId}`;
-                        audioEl.srcObject = remoteStream;
-                        audioEl.autoplay = true;
-                        if (!audioEnabled) audioEl.muted = true;
-                        document.body.appendChild(audioEl);
-                        
-                        peerInfo.stream = remoteStream;
-                        initVoiceIndicator(remoteStream, peerId);
-                    }
-                } else if (event.track.kind === "video") {
-                    const videoEl = document.getElementById("screen-video");
-                    videoEl.srcObject = remoteStream;
-                    document.getElementById("screen-share-area").style.display = "block";
-                    document.getElementById("screen-user-label").innerText = `Демонстрация экрана: ${peerName}`;
-                }
-            };
-
-            addPeerUI(peerId, peerName);
-
-            if (isOffer) {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                sendSignal({ type: "offer", targetId: peerId, sdp: offer });
-            }
-        }
-
-        function removePeer(peerId) {
-            const peer = peers.get(peerId);
-            if (peer) {
-                peer.pc.close();
-                peers.delete(peerId);
-            }
-            const card = document.getElementById(`card-${peerId}`);
-            const item = document.getElementById(`uitem-${peerId}`);
-            const aud = document.getElementById(`audio-${peerId}`);
-            if (card) card.remove();
-            if (item) item.remove();
-            if (aud) aud.remove();
-
-            if (peer && document.getElementById("screen-user-label").innerText.includes(peer.name)) {
-                document.getElementById("screen-share-area").style.display = "none";
-            }
-            updateOnlineCounter();
-        }
-
-        // --- 4. ИНТЕРФЕЙС СПИСКОВ И КАРТОЧЕК ---
-        function addPeerUI(peerId, peerName) {
-            const item = document.createElement("div");
-            item.className = "user-item";
-            item.id = `uitem-${peerId}`;
-            item.innerHTML = `
-                <div class="user-avatar">${peerName[0].toUpperCase()}</div>
-                <div class="user-info">${peerName}</div>
-                <div class="user-status-icons" id="mic-status-${peerId}">🎙 Вкл</div>
-            `;
-            usersContainer.appendChild(item);
-
-            const card = document.createElement("div");
-            card.className = "peer-card";
-            card.id = `card-${peerId}`;
-            card.innerHTML = `
-                <div class="avatar-big">${peerName[0].toUpperCase()}</div>
-                <div class="name">${peerName}</div>
-                <div class="mic-indicator" id="card-mic-status-${peerId}">Собеседник</div>
-                <div style="display:none;" id="volume-bar-${peerId}"></div>
-            `;
-            cardsContainer.appendChild(card);
-            updateOnlineCounter();
-        }
-
-        function updateLocalUserCard() {
-            const item = document.createElement("div");
-            item.className = "user-item";
-            item.innerHTML = `
-                <div class="user-avatar" style="background-color: var(--success);">${myName[0].toUpperCase()}</div>
-                <div class="user-info"><strong>${myName} (Вы)</strong></div>
-            `;
-            usersContainer.appendChild(item);
-
-            const card = document.createElement("div");
-            card.className = "peer-card";
-            card.id = `card-local`;
-            card.innerHTML = `
-                <div class="avatar-big" style="background-color: var(--success);">${myName[0].toUpperCase()}</div>
-                <div class="name">${myName} (Вы)</div>
-                <div class="mic-indicator">Ваш микрофон</div>
-            `;
-            cardsContainer.appendChild(card);
-        }
-
-        function updateOnlineCounter() {
-            const count = peers.size + 1;
-            document.querySelector(".sidebar-header h3").innerText = `В сети комнаты (${count}):`;
-        }
-
-        // --- 5. ФУНКЦИЯ ДИСКОРД-ПОДСВЕТКИ ГОВОРЯЩЕГО ЮЗЕРА ---
-        function initVoiceIndicator(stream, peerId) {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createMediaStreamSource(stream);
-                const analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512;
-                source.connect(analyser);
-
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                
-                function checkVolume() {
-                    if (!peers.has(peerId)) return;
-                    analyser.getByteFrequencyData(dataArray);
-                    let sum = 0;
-                    for (let i = 0; i < dataArray.length; i++) {
-                        sum += dataArray[i];
-                    }
-                    let average = sum / dataArray.length;
-                    
-                    const card = document.getElementById(`card-${peerId}`);
-                    if (card) {
-                        if (average > 12) {
-                            card.classList.add("speaking");
-                        } else {
-                            card.classList.remove("speaking");
-                        }
-                    }
-                    requestAnimationFrame(checkVolume);
-                }
-                checkVolume();
-            } catch(e){}
-        }
-
-        // --- 6. КНОПКИ КЛИЕНТА (МУТ, ДЕМКА, ЧАТ) ---
-        document.getElementById("toggle-mic-btn").addEventListener("click", (e) => {
-            micEnabled = !micEnabled;
-            localAudioStream.getAudioTracks().forEach(track => track.enabled = micEnabled);
+            // Обочины (зеленый крафт-газон)
+            const sideColor = isEven ? 0x26de81 : 0x20bf6b;
+            const sideMat = new THREE.MeshLambertMaterial({ color: sideColor });
+            const sideGeom = new THREE.BoxGeometry(30, 0.1, segmentLength);
             
-            e.target.classList.toggle("active", micEnabled);
-            e.target.classList.toggle("danger", !micEnabled);
-            e.target.innerText = micEnabled ? "🎙 Микро" : "🎙 Мут";
+            const leftSide = new THREE.Mesh(sideGeom, sideMat);
+            leftSide.position.set(-21, -0.15, z - segmentLength / 2);
+            segmentGroup.add(leftSide);
 
-            sendSignal({ type: "status_update", micEnabled: micEnabled });
-        });
+            const rightSide = new THREE.Mesh(sideGeom, sideMat);
+            rightSide.position.set(21, -0.15, z - segmentLength / 2);
+            segmentGroup.add(rightSide);
 
-        document.getElementById("toggle-audio-btn").addEventListener("click", (e) => {
-            audioEnabled = !audioEnabled;
-            peers.forEach((peer, id) => {
-                const aud = document.getElementById(`audio-${id}`);
-                if (aud) aud.muted = !audioEnabled;
-            });
-            e.target.classList.toggle("active", audioEnabled);
-            e.target.classList.toggle("danger", !audioEnabled);
-            e.target.innerText = audioEnabled ? "🔊 Звук" : "🔇 Выкл";
-        });
+            // Бордюрная разметка (красно-белая классика)
+            const curbColor = isEven ? 0xffffff : 0xfc5c65;
+            const curbMat = new THREE.MeshLambertMaterial({ color: curbColor });
+            const curbGeom = new THREE.BoxGeometry(0.4, 0.3, segmentLength);
+            
+            const leftCurb = new THREE.Mesh(curbGeom, curbMat);
+            leftCurb.position.set(-6.2, 0.1, z - segmentLength / 2);
+            segmentGroup.add(leftCurb);
 
-        document.getElementById("share-screen-btn").addEventListener("click", async (e) => {
-            if (!isSharingScreen) {
-                try {
-                    localScreenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-                    isSharingScreen = true;
-                    e.target.innerText = "🛑 Остановить демку";
-                    e.target.classList.add("danger");
+            const rightCurb = new THREE.Mesh(curbGeom, curbMat);
+            rightCurb.position.set(6.2, 0.1, z - segmentLength / 2);
+            segmentGroup.add(rightCurb);
 
-                    const localVideo = document.getElementById("screen-video");
-                    localVideo.srcObject = localScreenStream;
-                    document.getElementById("screen-share-area").style.display = "block";
-                    document.getElementById("screen-user-label").innerText = `Демонстрация экрана: Вы`;
+            // Майнкрафт-деревья по бокам дороги
+            if (Math.random() > 0.3) createBlockTree(segmentGroup, -9 - Math.random() * 5, z - Math.random() * segmentLength);
+            if (Math.random() > 0.3) createBlockTree(segmentGroup, 9 + Math.random() * 5, z - Math.random() * segmentLength);
 
-                    const videoTrack = localScreenStream.getVideoTracks()[0];
-                    peers.forEach((peer, id) => {
-                        peer.pc.addTrack(videoTrack, localScreenStream);
-                        peer.pc.createOffer().then(offer => {
-                            peer.pc.setLocalDescription(offer);
-                            sendSignal({ type: "offer", targetId: id, sdp: offer });
-                        });
-                    });
-
-                    videoTrack.onended = () => { stopScreenShare(e.target); };
-                } catch (err) { console.log(err); }
-            } else {
-                stopScreenShare(e.target);
+            // Генерация препятствий на трассе
+            if (Math.abs(z) > 50 && Math.random() > 0.6) {
+                const obsX = (Math.random() - 0.5) * 9.5;
+                const obsZ = z - Math.random() * segmentLength;
+                createObstacle(segmentGroup, obsX, obsZ);
             }
-        });
 
-        function stopScreenShare(btnElement) {
-            isSharingScreen = false;
-            btnElement.innerText = "🖥 Включить демку";
-            btnElement.classList.remove("danger");
-            document.getElementById("screen-share-area").style.display = "none";
+            scene.add(segmentGroup);
+            segments.push({ z: z, mesh: segmentGroup });
+        }
 
-            if (localScreenStream) {
-                localScreenStream.getTracks().forEach(track => track.stop());
-                localScreenStream = null;
+        function createBlockTree(group, x, z) {
+            const tree = new THREE.Group();
+            
+            // Коричневый ствол
+            const trunkGeom = new THREE.BoxGeometry(0.6, 2.4, 0.6);
+            const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
+            const trunk = new THREE.Mesh(trunkGeom, trunkMat);
+            trunk.position.y = 1.2;
+            tree.add(trunk);
+
+            // Зеленая квадратная листва
+            const leavesGeom = new THREE.BoxGeometry(2, 2, 2);
+            const leavesMat = new THREE.MeshLambertMaterial({ color: 0x26af61 });
+            const leaves = new THREE.Mesh(leavesGeom, leavesMat);
+            leaves.position.y = 2.8;
+            tree.add(leaves);
+
+            tree.position.set(x, 0, z);
+            group.add(tree);
+        }
+
+        function createObstacle(group, x, z) {
+            const obsGeom = new THREE.BoxGeometry(1.4, 1.2, 1.4);
+            const obsMat = new THREE.MeshLambertMaterial({ color: 0xd35400 }); // Оранжевый воксельный блок
+            const obs = new THREE.Mesh(obsGeom, obsMat);
+            obs.position.set(x, 0.6, z);
+            group.add(obs);
+            
+            obstacles.push({ x: x, z: z, mesh: obs });
+        }
+
+        function updateTrack() {
+            // Генерируем чанки вперед по ходу движения игрока
+            while (lastSegmentZ > car.position.z - maxSegments * segmentLength) {
+                createSegment(lastSegmentZ);
+                lastSegmentZ -= segmentLength;
             }
-            sendSignal({ type: "join", senderName: myName });
+
+            // Очищаем старые чанки сзади для оптимизации
+            for (let i = segments.length - 1; i >= 0; i--) {
+                if (segments[i].z > car.position.z + 15) {
+                    scene.remove(segments[i].mesh);
+                    const deletedZ = segments[i].z;
+                    
+                    // Удаляем отработавшие препятствия
+                    for (let j = obstacles.length - 1; j >= 0; j--) {
+                        if (obstacles[j].z <= deletedZ && obstacles[j].z > deletedZ - segmentLength) {
+                            obstacles.splice(j, 1);
+                        }
+                    }
+                    segments.splice(i, 1);
+                }
+            }
         }
 
-        function appendChatMessage(author, text) {
-            const msg = document.createElement("div");
-            msg.className = "msg";
-            msg.innerHTML = `<span class="msg-author">${author}:</span>${text}`;
-            chatMsgContainer.appendChild(msg);
-            chatMsgContainer.scrollTop = chatMsgContainer.scrollHeight;
-        }
-
-        function sendTextMessage() {
-            const text = chatInput.value.trim();
-            if (text === "") return;
-            sendSignal({ type: "chat", text: text });
-            appendChatMessage(myName + " (Вы)", text);
-            chatInput.value = "";
-        }
-
-        document.getElementById("chat-send-btn").addEventListener("click", sendTextMessage);
-        chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendTextMessage(); });
-
-        document.getElementById("leave-btn").addEventListener("click", () => {
-            sendSignal({ type: "leave" });
-            window.location.reload();
-        });
-
-        window.onbeforeunload = () => {
-            if(mqttClient) sendSignal({ type: "leave" });
+        // --- УПРАВЛЕНИЕ КЛАВИАТУРОЙ ---
+        const handler = (e, status) => {
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.Forward = status;
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.Backward = status;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.Left = status;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.Right = status;
         };
+        window.addEventListener('keydown', (e) => handler(e, true));
+        window.addEventListener('keyup', (e) => handler(e, false));
+
+        // --- ПРОВЕРКА СТОЛКНОВЕНИЙ ---
+        function checkCollisions() {
+            for (let i = 0; i < obstacles.length; i++) {
+                const obs = obstacles[i];
+                const distX = Math.abs(car.position.x - obs.x);
+                const distZ = Math.abs(car.position.z - obs.z);
+
+                // Если габариты пересеклись — отлетаем назад
+                if (distX < 1.5 && distZ < 2.2) {
+                    speed = -0.3; 
+                    document.getElementById('ui').style.color = '#ff4d4d'; // Мигание интерфейса при ударе
+                    setTimeout(() => { document.getElementById('ui').style.color = '#fff'; }, 150);
+                }
+            }
+        }
+
+        // --- ИГРОВОЙ ЦИКЛ (ИЗМЕНЕНИЯ КАЖДЫЙ КАДР) ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Разгон и торможение
+            if (keys.Forward) speed = Math.min(speed + accel, maxSpeed);
+            else if (keys.Backward) speed = Math.max(speed - accel, -maxSpeed / 2);
+            else {
+                if (speed > 0) speed = Math.max(0, speed - deccel);
+                if (speed < 0) speed = Math.min(0, speed + deccel);
+            }
+
+            // Повороты руля (только в движении)
+            if (keys.Left && Math.abs(speed) > 0.05) carX -= 0.11 * (speed / maxSpeed);
+            if (keys.Right && Math.abs(speed) > 0.05) carX += 0.11 * (speed / maxSpeed);
+
+            // Ограничение съезда в кювет
+            if (carX < -5.4) { carX = -5.4; speed *= 0.96; }
+            if (carX > 5.4) { carX = 5.4; speed *= 0.96; }
+
+            // Обновление позиций
+            car.position.z -= speed; // Движение вперед по оси Z
+            car.position.x = carX;
+
+            // Вращение колес в такт скорости
+            wheels.forEach(w => w.rotation.x -= speed);
+
+            // Эффект ретро-наклона кузова на поворотах
+            if (keys.Left && speed > 0.1) car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, 0.07, 0.1);
+            else if (keys.Right && speed > 0.1) car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -0.07, 0.1);
+            else car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, 0, 0.1);
+
+            // Камера плавно следует позади машинки
+            camera.position.set(car.position.x * 0.65, 4.3, car.position.z + 7.5);
+            camera.lookAt(car.position.x, 1.1, car.position.z - 5);
+
+            // Логика мира
+            updateTrack();
+            checkCollisions();
+
+            // Рендеринг интерфейса
+            document.getElementById('speed').innerText = Math.round(Math.max(0, speed * 160));
+            document.getElementById('distance').innerText = Math.round(Math.abs(car.position.z));
+
+            renderer.render(scene, camera);
+        }
+
+        // Поддержка изменения размеров окна
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Старт игры
+        animate();
     </script>
 </body>
 </html>
