@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Backrooms: Реальный Онлайн</title>
+    <title>The Backrooms: Глобальный Онлайн</title>
     <style>
         html, body {
             margin: 0; padding: 0; width: 100%; height: 100%;
@@ -12,7 +12,7 @@
         }
         #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* Реалистичный VHS фильтр */
+        /* VHS фильтр под стиль оригинального скриншота */
         #vhs-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
@@ -44,11 +44,11 @@
             text-shadow: 1px 1px 2px #000;
         }
         
-        /* ЛЕВЫЙ НИЖНИЙ БЛОК: Данные сервера */
+        /* Данные сервера слева снизу */
         #server-info {
             position: absolute; bottom: 20px; left: 20px; z-index: 5;
             color: #eedc82; font-size: 0.85rem; pointer-events: none; display: none;
-            text-shadow: 1px 1px 2px #000; background: rgba(21, 20, 11, 0.7);
+            text-shadow: 1px 1px 2px #000; background: rgba(21, 20, 11, 0.8);
             padding: 8px 12px; border-radius: 4px; border: 1px solid rgba(238, 220, 130, 0.2);
         }
 
@@ -75,7 +75,7 @@
 
     <div id="menu">
         <h1>THE BACKROOMS</h1>
-        <p>Уровень 0 • Настоящий Онлайн (GitHub версия)</p>
+        <p>Уровень 0 • Чистый HTML Онлайн (GitHub Pages)</p>
         <div class="input-group">
             <input type="text" id="nickname-input" placeholder="Ваш ник" maxlength="12" value="Игрок">
         </div>
@@ -88,9 +88,9 @@
     </div>
 
     <div id="server-info">
-        TARGET ADDR: <span id="srv-ip">127.0.0.1</span><br>
-        TARGET PORT: <span id="srv-port">3000</span><br>
-        STATUS: <span id="srv-status" style="color: #6c5;">CONNECTING</span>
+        TARGET ADDR: <span id="srv-ip">broker.hivemq.com</span><br>
+        TARGET PORT: <span id="srv-port">8884 (WSS)</span><br>
+        STATUS: <span id="srv-status" style="color: #eedc82;">CONNECTING...</span>
     </div>
 
     <div id="crosshair"></div>
@@ -100,14 +100,6 @@
     <div id="canvas-container"></div>
 
     <script>
-        // ========================================================
-        // НАСТРОЙКИ СЕРВЕРА ДЛЯ ТЕБЯ
-        // ========================================================
-        const USE_NODE_SERVER = false;        // Поставь true, когда мы создадим Node.js бэкенд
-        const SERVER_IP = "127.0.0.1";        // Сюда впишешь IP или домен хостинга (например, от Render)
-        const SERVER_PORT = "3000";           // Сюда порт сервера
-        // ========================================================
-
         const CELL_SIZE = 4;
         const CHUNK_RADIUS = 9;
         const SPEED_WALK = 3.2;
@@ -123,7 +115,7 @@
         const playerPos = new THREE.Vector3(0, 1.5, 0); 
         let playerVelocity = new THREE.Vector3();
 
-        let flashlight, mqttClient, wsClient;
+        let flashlight, mqttClient;
         const spawnedWalls = new Map();
         const remotePlayers = new Map();
         let monsterMesh;
@@ -131,6 +123,7 @@
 
         let wallTexture, carpetTexture, ceilingTexture;
 
+        // Генерация текстур один в один как на скрине
         function generateExactTextures() {
             const canvasWall = document.createElement('canvas');
             canvasWall.width = 256; canvasWall.height = 256;
@@ -189,7 +182,7 @@
 
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
             camera.position.copy(playerPos);
-            camera.rotation.order = 'YXZ'; 
+            camera.rotation.order = 'YXZ'; // Фикс бага с разворотом камеры на 360
             scene.add(camera);
 
             const ambientLight = new THREE.AmbientLight('#a39d6c', 0.8);
@@ -287,6 +280,7 @@
             return false;
         }
 
+        // Тот самый один редкий страшный монстр из палок/проведов
         function createScaryMonster() {
             const group = new THREE.Group();
             const mat = new THREE.MeshBasicMaterial({ color: '#030303' });
@@ -305,7 +299,7 @@
             }
 
             monsterMesh = group;
-            monsterMesh.position.set(24, 0, 24);
+            monsterMesh.position.set(28, 0, 28);
             scene.add(monsterMesh);
         }
 
@@ -315,7 +309,7 @@
             dir.y = 0;
             let dist = dir.length();
 
-            if (dist < 30) {
+            if (dist < 25) {
                 dir.normalize();
                 let nextPos = monsterMesh.position.clone().addScaledVector(dir, monsterSpeed * delta);
                 
@@ -338,18 +332,17 @@
                 document.getElementById('jumpscare').style.display = 'none';
                 playerPos.set(0, 1.5, 0);
                 camera.position.copy(playerPos);
-                monsterMesh.position.set(20 + Math.random()*20, 0, 20 + Math.random()*20);
+                monsterMesh.position.set(25 + Math.random()*25, 0, 25 + Math.random()*25);
                 isPlaying = true;
                 document.body.requestPointerLock();
             }, 2000);
         }
 
-        // Рендер чужих игроков-капсул
         function syncRemotePlayer(data) {
             if (data.id === myId) return;
             if (!remotePlayers.has(data.id)) {
                 const capGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.6, 8);
-                const capMat = new THREE.MeshStandardMaterial({ color: '#900000', roughness: 0.5 });
+                const capMat = new THREE.MeshStandardMaterial({ color: '#900000', roughness: 0.5 }); // Капсула друга
                 const mesh = new THREE.Mesh(capGeo, capMat);
                 scene.add(mesh);
                 remotePlayers.set(data.id, { mesh: mesh, lastSeen: Date.now() });
@@ -360,11 +353,8 @@
             }
         }
 
-        // --- ВАРИАНТ 1: Глобальный MQTT (Дефолт) ---
+        // Интернет-онлайн прямо через браузер на GitHub Pages
         function initGlobalMultiplayer() {
-            document.getElementById('srv-ip').innerText = "HiveMQ Broker";
-            document.getElementById('srv-port = ""').innerText = "WSS (Public)";
-            
             const brokerUri = "wss://broker.hivemq.com:8884/mqtt"; 
             mqttClient = new Paho.MQTT.Client(brokerUri, "sub_back_" + Math.random().toString(36).substr(2, 5));
 
@@ -377,66 +367,30 @@
 
             mqttClient.connect({
                 onSuccess: () => {
-                    document.getElementById('srv-status').innerText = "CONNECTED (MQTT)";
+                    document.getElementById('srv-status').innerText = "CONNECTED";
                     document.getElementById('srv-status').style.color = "#6c5";
-                    mqttClient.subscribe("backrooms/level0/global_game_v2");
+                    
+                    // Твой уникальный топик под репозиторий, чтобы чужие пакеты не мешали
+                    mqttClient.subscribe("krkshs/backrooms/level0");
+                    
                     setInterval(() => {
                         if (!isPlaying) return;
                         let msg = new Paho.MQTT.Message(JSON.stringify({
                             type: 'move', id: myId, name: myName, x: playerPos.x, y: playerPos.y, z: playerPos.z
                         }));
-                        msg.destinationName = "backrooms/level0/global_game_v2";
+                        msg.destinationName = "krkshs/backrooms/level0";
                         mqttClient.send(msg);
                     }, 50);
                 },
-                useSSL: true
+                useSSL: true,
+                onFailure: () => {
+                    document.getElementById('srv-status').innerText = "CONNECTION FAILED";
+                    document.getElementById('srv-status').style.color = "#ff4d4d";
+                }
             });
         }
 
-        // --- ВАРИАНТ 2: Твой будущий Node.js Сервер через WebSockets ---
-        function initNodeServer() {
-            document.getElementById('srv-ip').innerText = SERVER_IP;
-            document.getElementById('srv-port').innerText = SERVER_PORT;
-            document.getElementById('srv-status').innerText = "CONNECTING...";
-            document.getElementById('srv-status').style.color = "#eedc82";
-
-            const url = (SERVER_IP.startsWith('http') || SERVER_IP.includes('render')) 
-                ? `wss://${SERVER_IP.replace('https://','').replace('http://','')}` 
-                : `ws://${SERVER_IP}:${SERVER_PORT}`;
-
-            wsClient = new WebSocket(url);
-
-            wsClient.onopen = () => {
-                document.getElementById('srv-status').innerText = "ONLINE (NODE)";
-                document.getElementById('srv-status').style.color = "#6c5";
-                
-                setInterval(() => {
-                    if (wsClient.readyState === WebSocket.OPEN && isPlaying) {
-                        wsClient.send(JSON.stringify({
-                            type: 'move', id: myId, name: myName, x: playerPos.x, y: playerPos.y, z: playerPos.z
-                        }));
-                    }
-                }, 50);
-            };
-
-            wsClient.onmessage = (event) => {
-                try {
-                    let data = JSON.parse(event.data);
-                    if(Array.isArray(data)) {
-                        data.forEach(p => syncRemotePlayer(p));
-                    } else {
-                        syncRemotePlayer(data);
-                    }
-                } catch(e){}
-            };
-
-            wsClient.onerror = () => {
-                document.getElementById('srv-status').innerText = "ERR / OFFLINE";
-                document.getElementById('srv-status').style.color = "#ff4d4d";
-            };
-        }
-
-        // Очистка неактивных игроков
+        // Удаление игроков при выходе из игры
         setInterval(() => {
             let now = Date.now();
             for (let [id, data] of remotePlayers.entries()) {
@@ -501,7 +455,7 @@
             document.getElementById('player-name').innerText = "Игрок: " + myName;
             document.getElementById('menu').style.display = 'none';
             document.getElementById('hud').style.display = 'block';
-            document.getElementById('server-info').style.display = 'block'; // Показываем IP блок
+            document.getElementById('server-info').style.display = 'block';
             document.getElementById('crosshair').style.display = 'block';
             document.getElementById('instructions').style.display = 'block';
             
@@ -509,13 +463,7 @@
             document.body.requestPointerLock();
             
             startAmbientSound();
-            
-            // Проверка: какой бэкенд использовать
-            if (USE_NODE_SERVER) {
-                initNodeServer();
-            } else {
-                initGlobalMultiplayer();
-            }
+            initGlobalMultiplayer();
         });
 
         function animate() {
