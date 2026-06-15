@@ -3,506 +3,644 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Backrooms: Глобальный Онлайн</title>
+    <title>P2P Voice & Screen Chat</title>
     <style>
-        html, body {
+        :root {
+            --bg-main: #1e1f22;
+            --bg-sidebar: #2b2d31;
+            --bg-card: #313338;
+            --bg-input: #1e1f22;
+            --accent: #5865f2;
+            --accent-hover: #4752c4;
+            --text-main: #dbdee1;
+            --text-muted: #949ba4;
+            --danger: #f23f43;
+            --success: #23a55a;
+        }
+
+        body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background-color: #000;
-            font-family: 'Courier New', Courier, monospace; user-select: none;
-        }
-        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
-        
-        /* VHS фильтр под стиль оригинального скриншота */
-        #vhs-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 3px, 3px 100%; z-index: 2; pointer-events: none; opacity: 0.85;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main); color: var(--text-main);
+            overflow: hidden;
         }
 
-        #menu {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #242214; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 10; color: #d1c28a; text-align: center;
+        /* Окно авторизации */
+        #login-screen {
+            position: absolute; width: 100%; height: 100%;
+            background-color: var(--bg-main); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-        #menu h1 { font-size: 3rem; margin-bottom: 5px; letter-spacing: 5px; color: #eedc82; text-shadow: 3px 3px 0px #000; }
-        .input-group { margin-bottom: 20px; }
-        #nickname-input {
-            background: #15140b; border: 2px solid #54503d; padding: 12px 20px;
-            font-size: 1.2rem; color: #fff; outline: none; text-align: center; border-radius: 4px; font-family: inherit;
+        .login-box {
+            background-color: var(--bg-sidebar); padding: 40px;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-align: center; width: 320px;
         }
-        #start-btn {
-            background: #eedc82; color: #1a1913; border: none; padding: 12px 30px;
-            font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 4px;
-            box-shadow: 0 4px 0px #8a8158; font-family: inherit;
+        .login-box h2 { margin-top: 0; color: #fff; margin-bottom: 20px; }
+        .login-box input {
+            width: 100%; padding: 12px; border: none; background-color: var(--bg-input);
+            color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 1rem;
+            margin-bottom: 20px; outline: none; text-align: center;
         }
-        #start-btn:hover { background: #fff1b0; }
+        .login-box button {
+            width: 100%; padding: 12px; border: none; background-color: var(--accent);
+            color: #fff; font-size: 1rem; font-weight: bold; border-radius: 4px;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .login-box button:hover { background-color: var(--accent-hover); }
 
-        #hud {
-            position: absolute; top: 20px; left: 20px; z-index: 5;
-            color: #e2d69a; font-size: 1.1rem; pointer-events: none; display: none;
-            text-shadow: 1px 1px 2px #000;
-        }
-        
-        /* Данные сервера слева снизу */
-        #server-info {
-            position: absolute; bottom: 20px; left: 20px; z-index: 5;
-            color: #eedc82; font-size: 0.85rem; pointer-events: none; display: none;
-            text-shadow: 1px 1px 2px #000; background: rgba(21, 20, 11, 0.8);
-            padding: 8px 12px; border-radius: 4px; border: 1px solid rgba(238, 220, 130, 0.2);
+        /* Главный интерфейс */
+        #app-container {
+            display: flex; width: 100%; height: 100%; display: none;
         }
 
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
-            background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%);
-            z-index: 5; pointer-events: none; display: none;
+        /* Боковая панель (Пользователи и Кнопки управления) */
+        .sidebar {
+            width: 260px; background-color: var(--bg-sidebar);
+            display: flex; flex-direction: column; justify-content: space-between;
+            border-right: 1px solid rgba(0,0,0,0.2);
         }
-        #instructions {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            color: rgba(217, 201, 131, 0.7); font-size: 0.9rem; z-index: 5; pointer-events: none; text-align: center; display: none;
+        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.2); }
+        .sidebar-header h3 { margin: 0; font-size: 1.1rem; color: #fff; }
+        .user-list { padding: 15px; flex-grow: 1; overflow-y: auto; }
+        .user-item {
+            display: flex; align-items: center; padding: 8px 10px;
+            margin-bottom: 5px; border-radius: 4px; background: rgba(255,255,255,0.03);
         }
-        #jumpscare {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505;
-            z-index: 100; display: none; justify-content: center; align-items: center; color: #800; font-size: 4rem; font-weight: bold;
+        .user-avatar {
+            width: 32px; height: 32px; background-color: var(--accent);
+            border-radius: 50%; display: flex; justify-content: center;
+            align-items: center; font-weight: bold; color: #fff; margin-right: 10px;
         }
+        .user-info { flex-grow: 1; font-size: 0.95rem; }
+        .user-status-icons { display: flex; gap: 5px; }
+        .status-icon { width: 16px; height: 16px; opacity: 0.6; }
+
+        /* Кнопки управления (Микро, Звук, Демка) */
+        .controls-panel {
+            padding: 15px; background-color: rgba(0,0,0,0.15);
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .btn-group { display: flex; gap: 8px; }
+        .control-btn {
+            flex: 1; padding: 10px; border: none; border-radius: 4px;
+            font-weight: bold; cursor: pointer; display: flex; justify-content: center;
+            align-items: center; gap: 5px; font-size: 0.85rem; transition: background 0.2s;
+            color: #fff; background-color: #4e5058;
+        }
+        .control-btn:hover { background-color: #6d6f78; }
+        .control-btn.active { background-color: var(--success); }
+        .control-btn.active:hover { background-color: #1a8144; }
+        .control-btn.danger { background-color: var(--danger); }
+        .control-btn.danger:hover { background-color: #bc3135; }
+
+        /* Центральная рабочая зона */
+        .main-content {
+            flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-main);
+        }
+
+        /* Сетка стримов и говорящих */
+        .streams-grid {
+            flex-grow: 1; padding: 20px; display: flex; flex-wrap: wrap;
+            gap: 15px; overflow-y: auto; align-content: flex-start;
+        }
+        .peer-card {
+            background-color: var(--bg-card); border-radius: 8px;
+            width: 240px; height: 160px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid transparent;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        /* Подсветка говорящего */
+        .peer-card.speaking {
+            border-color: var(--success);
+            box-shadow: 0 0 15px rgba(35, 165, 90, 0.4);
+        }
+        .peer-card .avatar-big {
+            width: 64px; height: 64px; background-color: var(--accent);
+            border-radius: 50%; display: flex; justify-content: center;
+            align-items: center; font-size: 1.5rem; font-weight: bold; color: #fff;
+            margin-bottom: 10px;
+        }
+        .peer-card .name { font-weight: bold; font-size: 1rem; color: #fff; }
+        .peer-card .mic-indicator {
+            position: absolute; bottom: 10px; right: 10px;
+            font-size: 0.8rem; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px;
+        }
+
+        /* Большое окно для Демонстрации Экрана (Демки) */
+        #screen-share-area {
+            height: 50%; background-color: #000; display: none;
+            position: relative; border-bottom: 2px solid rgba(0,0,0,0.3);
+        }
+        #screen-video { width: 100%; height: 100%; object-fit: contain; }
+        .screen-label {
+            position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7);
+            padding: 5px 12px; border-radius: 4px; font-size: 0.9rem; font-weight: bold;
+        }
+
+        /* Текстовый чат снизу */
+        .chat-area {
+            height: 200px; background-color: var(--bg-sidebar);
+            display: flex; flex-direction: column; border-top: 1px solid rgba(0,0,0,0.2);
+        }
+        .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; font-size: 0.95rem; }
+        .msg { margin-bottom: 6px; line-height: 1.3; }
+        .msg-author { font-weight: bold; color: var(--accent); margin-right: 5px; }
+        .chat-input-wrapper { padding: 10px 15px; display: flex; gap: 10px; }
+        .chat-input-wrapper input {
+            flex-grow: 1; padding: 10px; border: none; background-color: var(--bg-input);
+            color: #fff; border-radius: 4px; outline: none; font-family: inherit;
+        }
+        .chat-input-wrapper button {
+            padding: 10px 20px; border: none; background-color: var(--accent);
+            color: #fff; font-weight: bold; border-radius: 4px; cursor: pointer;
+        }
+        .chat-input-wrapper button:hover { background-color: var(--accent-hover); }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Подключаем MQTT клиент Paho для обмена WebRTC сигналом напрямую на GitHub Pages -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 </head>
 <body>
 
-    <div id="vhs-overlay"></div>
-
-    <div id="menu">
-        <h1>THE BACKROOMS</h1>
-        <p>Уровень 0 • Чистый HTML Онлайн (GitHub Pages)</p>
-        <div class="input-group">
-            <input type="text" id="nickname-input" placeholder="Ваш ник" maxlength="12" value="Игрок">
+    <!-- Окно логина -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>Войс Чат & Демка</h2>
+            <input type="text" id="nickname-input" placeholder="Введите ваш ник" maxlength="14" value="Пользователь">
+            <button id="join-btn">ПОДКЛЮЧИТЬСЯ</button>
         </div>
-        <button id="start-btn">ПОДКЛЮЧИТЬСЯ</button>
     </div>
 
-    <div id="hud">
-        <div id="player-name">Игрок: -</div>
-        <div id="online-count">В игре: 1</div>
+    <!-- Основное окно -->
+    <div id="app-container">
+        <!-- Левый сайдбар -->
+        <div class="sidebar">
+            <div>
+                <div class="sidebar-header">
+                    <h3>В сети комнаты:</h3>
+                </div>
+                <div class="user-list" id="users-container">
+                    <!-- Сюда добавляются юзеры динамически -->
+                </div>
+            </div>
+
+            <!-- Нижняя панель с кнопками мута, демки и тд -->
+            <div class="controls-panel">
+                <div class="btn-group">
+                    <button class="control-btn active" id="toggle-mic-btn">🎙 Микро</button>
+                    <button class="control-btn active" id="toggle-audio-btn">🔊 Звук</button>
+                </div>
+                <button class="control-btn" id="share-screen-btn">🖥 Включить демку</button>
+                <button class="control-btn danger" id="leave-btn">Отключиться</button>
+            </div>
+        </div>
+
+        <!-- Центральный контент -->
+        <div class="main-content">
+            <!-- Зона стрима/демки экрана -->
+            <div id="screen-share-area">
+                <video id="screen-video" autoplay playsinline muted></video>
+                <div class="screen-label" id="screen-user-label">Демонстрация экрана: Никто</div>
+            </div>
+
+            <!-- Сетка голосовых карточек участников -->
+            <div class="streams-grid" id="cards-container">
+                <!-- Карточки участников -->
+            </div>
+
+            <!-- Текстовый чат -->
+            <div class="chat-area">
+                <div class="chat-messages" id="chat-msg-container">
+                    <div class="msg"><span class="msg-author">Система:</span>Добро пожаловать в голосовой чат!</div>
+                </div>
+                <div class="chat-input-wrapper">
+                    <input type="text" id="chat-input" placeholder="Написать сообщение друзьям..." maxlength="150">
+                    <button id="chat-send-btn">Отправить</button>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div id="server-info">
-        TARGET ADDR: <span id="srv-ip">broker.hivemq.com</span><br>
-        TARGET PORT: <span id="srv-port">8884 (WSS)</span><br>
-        STATUS: <span id="srv-status" style="color: #eedc82;">CONNECTING...</span>
-    </div>
-
-    <div id="crosshair"></div>
-    <div id="instructions">WASD — Ходить | Shift — Бег | F — Фонарик | Клик по экрану активирует мышь</div>
-    <div id="jumpscare">ВЫ ПОЙМАНЫ</div>
-
-    <div id="canvas-container"></div>
 
     <script>
-        const CELL_SIZE = 4;
-        const CHUNK_RADIUS = 9;
-        const SPEED_WALK = 3.2;
-        const SPEED_SPRINT = 5.5;
+        // Конфигурация WebRTC и брокера сигналов
+        const MQTT_BROKER = "broker.hivemq.com";
+        const MQTT_PORT = 8884;
+        const TOPIC_ROOM = "krkshs/voicechat/global_room_v3"; // Уникальная комната для вас
+        
+        // Бесплатные STUN-сервера от Google для пробития NAT и прямого коннекта (P2P)
+        const rtcConfig = {
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" }
+            ]
+        };
 
-        let scene, camera, renderer, clock;
-        let myId = 'player_' + Math.random().toString(36).substr(2, 9);
-        let myName = "Игрок";
-        let isPlaying = false;
+        let myId = "usr_" + Math.random().toString(36).substr(2, 9);
+        let myName = "Аноним";
+        let mqttClient;
+        
+        let localAudioStream = null;
+        let localScreenStream = null;
+        
+        let micEnabled = true;
+        let audioEnabled = true;
+        let isSharingScreen = false;
 
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isSprinting = false;
-        let yaw = 0, pitch = 0;
-        const playerPos = new THREE.Vector3(0, 1.5, 0); 
-        let playerVelocity = new THREE.Vector3();
+        const peers = new Map(); // Хранилище всех активных P2P соединений
 
-        let flashlight, mqttClient;
-        const spawnedWalls = new Map();
-        const remotePlayers = new Map();
-        let monsterMesh;
-        let monsterSpeed = 2.4;
+        // Элементы интерфейса
+        const loginScreen = document.getElementById("login-screen");
+        const appContainer = document.getElementById("app-container");
+        const nicknameInput = document.getElementById("nickname-input");
+        const usersContainer = document.getElementById("users-container");
+        const cardsContainer = document.getElementById("cards-container");
+        const chatMsgContainer = document.getElementById("chat-msg-container");
+        const chatInput = document.getElementById("chat-input");
 
-        let wallTexture, carpetTexture, ceilingTexture;
-
-        // Генерация текстур один в один как на скрине
-        function generateExactTextures() {
-            const canvasWall = document.createElement('canvas');
-            canvasWall.width = 256; canvasWall.height = 256;
-            const ctxWall = canvasWall.getContext('2d');
-            ctxWall.fillStyle = '#cfbe73'; ctxWall.fillRect(0,0,256,256);
-            ctxWall.strokeStyle = '#a69a63'; ctxWall.lineWidth = 1.5;
-            for(let x=0; x<=256; x+=32) {
-                for(let y=-16; y<=272; y+=24) {
-                    ctxWall.beginPath();
-                    ctxWall.arc(x + 16, y + 20, 16, Math.PI, 0);
-                    ctxWall.stroke();
-                }
-            }
-            wallTexture = new THREE.CanvasTexture(canvasWall);
-            wallTexture.wrapS = THREE.RepeatWrapping; wallTexture.wrapT = THREE.RepeatWrapping;
-
-            const canvasCarpet = document.createElement('canvas');
-            canvasCarpet.width = 128; canvasCarpet.height = 128;
-            const ctxCarpet = canvasCarpet.getContext('2d');
-            ctxCarpet.fillStyle = '#9e8e59'; ctxCarpet.fillRect(0,0,128,128);
-            for(let i=0; i<4000; i++) {
-                ctxCarpet.fillStyle = Math.random() > 0.5 ? '#857747' : '#ad9d68';
-                ctxCarpet.fillRect(Math.random()*128, Math.random()*128, 1.5, 1.5);
-            }
-            carpetTexture = new THREE.CanvasTexture(canvasCarpet);
-            carpetTexture.wrapS = THREE.RepeatWrapping; carpetTexture.wrapT = THREE.RepeatWrapping;
-            carpetTexture.repeat.set(2, 2);
-
-            const canvasCeil = document.createElement('canvas');
-            canvasCeil.width = 128; canvasCeil.height = 128;
-            const ctxCeil = canvasCeil.getContext('2d');
-            ctxCeil.fillStyle = '#dcdcc5'; ctxCeil.fillRect(0,0,128,128);
-            ctxCeil.strokeStyle = '#abab96'; ctxCeil.strokeRect(0,0,128,128);
-            ceilingTexture = new THREE.CanvasTexture(canvasCeil);
-            ceilingTexture.wrapS = THREE.RepeatWrapping; ceilingTexture.wrapT = THREE.RepeatWrapping;
-        }
-
-        function checkStructure(cx, cz) {
-            if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) return false;
-            let n1 = Math.sin(cx * 0.5) * Math.cos(cz * 0.5);
-            let n2 = Math.cos(cx * 0.2) * Math.sin(cz * 0.2);
-            let isWall = false;
-            if (Math.abs(cx) % 5 === 0 && n1 > -0.3) isWall = true;
-            if (Math.abs(cz) % 5 === 0 && n2 > -0.3) isWall = true;
-            if (isWall && Math.sin(cx * 5.1 + cz * 9.2) > 0.3) isWall = false;
-            return isWall;
-        }
-
-        function init3D() {
-            clock = new THREE.Clock();
-            generateExactTextures();
-
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color('#222013');
-            scene.fog = new THREE.FogExp2('#222013', 0.08); 
-
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
-            camera.position.copy(playerPos);
-            camera.rotation.order = 'YXZ'; // Фикс бага с разворотом камеры на 360
-            scene.add(camera);
-
-            const ambientLight = new THREE.AmbientLight('#a39d6c', 0.8);
-            scene.add(ambientLight);
-
-            flashlight = new THREE.SpotLight('#fffbd6', 2.5, 20, Math.PI / 4.5, 0.6, 1.2);
-            camera.add(flashlight);
-            camera.add(flashlight.target);
-            flashlight.target.position.set(0, 0, -1);
-
-            renderer = new THREE.WebGLRenderer({ antialias: false });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            window.addEventListener('resize', onWindowResize);
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-            document.addEventListener('mousemove', onMouseMove);
-            
-            document.body.addEventListener('click', () => {
-                if(isPlaying) document.body.requestPointerLock();
-            });
-
-            createScaryMonster();
-        }
-
-        function updateChunks() {
-            let pGridX = Math.floor(playerPos.x / CELL_SIZE);
-            let pGridZ = Math.floor(playerPos.z / CELL_SIZE);
-            const activeKeys = new Set();
-
-            const wallGeo = new THREE.BoxGeometry(CELL_SIZE, 3, CELL_SIZE);
-            const wallMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.7 });
-            const floorGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
-            const floorMat = new THREE.MeshStandardMaterial({ map: carpetTexture, roughness: 0.9 });
-            const ceilGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
-            const ceilMat = new THREE.MeshStandardMaterial({ map: ceilingTexture, roughness: 0.4 });
-            const lampMat = new THREE.MeshBasicMaterial({ color: '#fffebd' });
-
-            for (let x = pGridX - CHUNK_RADIUS; x <= pGridX + CHUNK_RADIUS; x++) {
-                for (let z = pGridZ - CHUNK_RADIUS; z <= pGridZ + CHUNK_RADIUS; z++) {
-                    let key = `${x},${z}`;
-                    activeKeys.add(key);
-
-                    if (!spawnedWalls.has(key)) {
-                        let group = new THREE.Group();
-
-                        let floor = new THREE.Mesh(floorGeo, floorMat);
-                        floor.rotation.x = -Math.PI / 2;
-                        floor.position.set(x * CELL_SIZE, 0, z * CELL_SIZE);
-                        group.add(floor);
-
-                        let isLamp = (Math.abs(x) % 4 === 0 && Math.abs(z) % 4 === 0 && !checkStructure(x,z));
-                        let ceilMesh = new THREE.Mesh(ceilGeo, isLamp ? lampMat : ceilMat);
-                        if(isLamp) {
-                            let lampLight = new THREE.PointLight('#fffaa6', 0.25, 7);
-                            lampLight.position.set(0, -0.1, 0);
-                            ceilMesh.add(lampLight);
-                        }
-                        ceilMesh.rotation.x = Math.PI / 2;
-                        ceilMesh.position.set(x * CELL_SIZE, 3, z * CELL_SIZE);
-                        group.add(ceilMesh);
-
-                        if (checkStructure(x, z)) {
-                            let wall = new THREE.Mesh(wallGeo, wallMat);
-                            wall.position.set(x * CELL_SIZE, 1.5, z * CELL_SIZE);
-                            group.add(wall);
-                        }
-
-                        scene.add(group);
-                        spawnedWalls.set(key, group);
-                    }
-                }
+        // --- 1. АВТОРИЗАЦИЯ И СТАРТ ПОТОКОВ ---
+        document.getElementById("join-btn").addEventListener("click", async () => {
+            if (nicknameInput.value.trim() !== "") {
+                myName = nicknameInput.value.trim();
             }
 
-            for (let [key, mesh] of spawnedWalls.entries()) {
-                if (!activeKeys.has(key)) {
-                    scene.remove(mesh);
-                    spawnedWalls.delete(key);
-                }
-            }
-        }
-
-        function checkCollision(targetPos) {
-            let radius = 0.35;
-            let points = [
-                {x: targetPos.x - radius, z: targetPos.z - radius},
-                {x: targetPos.x + radius, z: targetPos.z - radius},
-                {x: targetPos.x - radius, z: targetPos.z + radius},
-                {x: targetPos.x + radius, z: targetPos.z + radius}
-            ];
-            for (let pt of points) {
-                if (checkStructure(Math.round(pt.x / CELL_SIZE), Math.round(pt.z / CELL_SIZE))) return true;
-            }
-            return false;
-        }
-
-        // Тот самый один редкий страшный монстр из палок/проведов
-        function createScaryMonster() {
-            const group = new THREE.Group();
-            const mat = new THREE.MeshBasicMaterial({ color: '#030303' });
-            
-            const spineGeo = new THREE.CylinderGeometry(0.04, 0.04, 2.4);
-            const spine = new THREE.Mesh(spineGeo, mat);
-            spine.position.y = 1.2;
-            group.add(spine);
-
-            for(let i = 0; i < 4; i++) {
-                const limbGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.6);
-                const limb = new THREE.Mesh(limbGeo, mat);
-                limb.position.set(Math.sin(i)*0.2, 1.0, Math.cos(i)*0.2);
-                limb.rotation.z = 0.4 * (i % 2 === 0 ? 1 : -1);
-                group.add(limb);
+            // Запрашиваем доступ к микрофону
+            try {
+                localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            } catch (err) {
+                alert("Ошибка доступа к микрофону! Без него голосовой чат не запустится. Убедитесь, что дали разрешение в браузере.");
+                return;
             }
 
-            monsterMesh = group;
-            monsterMesh.position.set(28, 0, 28);
-            scene.add(monsterMesh);
-        }
+            loginScreen.style.display = "none";
+            appContainer.style.display = "flex";
 
-        function updateMonsterLogic(delta) {
-            if(!monsterMesh) return;
-            let dir = new THREE.Vector3().subVectors(playerPos, monsterMesh.position);
-            dir.y = 0;
-            let dist = dir.length();
+            // Отрисовываем себя в списке
+            updateLocalUserCard();
 
-            if (dist < 25) {
-                dir.normalize();
-                let nextPos = monsterMesh.position.clone().addScaledVector(dir, monsterSpeed * delta);
-                
-                if (!checkStructure(Math.round(nextPos.x/CELL_SIZE), Math.round(nextPos.z/CELL_SIZE))) {
-                    monsterMesh.position.copy(nextPos);
-                }
-                monsterMesh.lookAt(playerPos.x, monsterMesh.position.y, playerPos.z);
+            // Подключаем обмен WebRTC пирами через MQTT
+            initSignaling();
+        </script>
+        <!-- Разделяем скрипт, чтобы не перегружать парсер -->
+        <script>
+        // --- 2. СИГНАЛИНГ СЕРВЕР (ОБМЕН РУКОПОЖАТИЯМИ ЧЕРЕЗ MQTT) ---
+        function initSignaling() {
+            mqttClient = new Paho.MQTT.Client(`wss://${MQTT_BROKER}:${MQTT_PORT}/mqtt`, "client_" + myId);
 
-                if (dist < 0.7) triggerJumpscare();
-            } else {
-                monsterMesh.position.x += Math.sin(clock.getElapsedTime() * 0.2) * 0.01;
-            }
-        }
-
-        function triggerJumpscare() {
-            isPlaying = false;
-            document.exitPointerLock();
-            document.getElementById('jumpscare').style.display = 'flex';
-            setTimeout(() => {
-                document.getElementById('jumpscare').style.display = 'none';
-                playerPos.set(0, 1.5, 0);
-                camera.position.copy(playerPos);
-                monsterMesh.position.set(25 + Math.random()*25, 0, 25 + Math.random()*25);
-                isPlaying = true;
-                document.body.requestPointerLock();
-            }, 2000);
-        }
-
-        function syncRemotePlayer(data) {
-            if (data.id === myId) return;
-            if (!remotePlayers.has(data.id)) {
-                const capGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.6, 8);
-                const capMat = new THREE.MeshStandardMaterial({ color: '#900000', roughness: 0.5 }); // Капсула друга
-                const mesh = new THREE.Mesh(capGeo, capMat);
-                scene.add(mesh);
-                remotePlayers.set(data.id, { mesh: mesh, lastSeen: Date.now() });
-            } else {
-                let rData = remotePlayers.get(data.id);
-                rData.mesh.position.set(data.x, data.y - 0.4, data.z);
-                rData.lastSeen = Date.now();
-            }
-        }
-
-        // Интернет-онлайн прямо через браузер на GitHub Pages
-        function initGlobalMultiplayer() {
-            const brokerUri = "wss://broker.hivemq.com:8884/mqtt"; 
-            mqttClient = new Paho.MQTT.Client(brokerUri, "sub_back_" + Math.random().toString(36).substr(2, 5));
-
-            mqttClient.onMessageArrived = (message) => {
+            mqttClient.onMessageArrived = async (message) => {
                 try {
-                    let data = JSON.parse(message.payloadString);
-                    syncRemotePlayer(data);
-                } catch(e){}
+                    const data = JSON.parse(message.payloadString);
+                    if (data.senderId === myId) return; // Игнорируем свои же пакеты
+
+                    // Логика текстового чата
+                    if (data.type === "chat") {
+                        appendChatMessage(data.senderName, data.text);
+                        return;
+                    }
+
+                    // Логика отключения кого-то
+                    if (data.type === "leave") {
+                        removePeer(data.senderId);
+                        return;
+                    }
+
+                    // Обработка статусов микрофона друзей
+                    if (data.type === "status_update") {
+                        const peer = peers.get(data.senderId);
+                        if (peer) {
+                            peer.micEnabled = data.micEnabled;
+                            document.getElementById(`mic-status-${data.senderId}`).innerText = data.micEnabled ? "🎙 Вкл" : "🚫 Мут";
+                        }
+                        return;
+                    }
+
+                    // Логика WebRTC хэндшейка
+                    if (data.type === "join") {
+                        // Новый юзер зашел! Создаем для него соединение и отправляем Offer
+                        await createPeerConnection(data.senderId, data.senderName, true);
+                    } else if (data.targetId === myId) {
+                        if (data.type === "offer") {
+                            await createPeerConnection(data.senderId, data.senderName, false);
+                            const peer = peers.get(data.senderId);
+                            await peer.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                            const answer = await peer.pc.createAnswer();
+                            await peer.pc.setLocalDescription(answer);
+                            
+                            sendSignal({ type: "answer", targetId: data.senderId, sdp: answer });
+                        } else if (data.type === "answer") {
+                            const peer = peers.get(data.senderId);
+                            if (peer) {
+                                await peer.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                            }
+                        } else if (data.type === "candidate") {
+                            const peer = peers.get(data.senderId);
+                            if (peer && data.candidate) {
+                                try {
+                                    await peer.pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                                } catch(e){}
+                            }
+                        }
+                    }
+                } catch (e) { console.error(e); }
             };
 
             mqttClient.connect({
                 onSuccess: () => {
-                    document.getElementById('srv-status').innerText = "CONNECTED";
-                    document.getElementById('srv-status').style.color = "#6c5";
-                    
-                    // Твой уникальный топик под репозиторий, чтобы чужие пакеты не мешали
-                    mqttClient.subscribe("krkshs/backrooms/level0");
-                    
-                    setInterval(() => {
-                        if (!isPlaying) return;
-                        let msg = new Paho.MQTT.Message(JSON.stringify({
-                            type: 'move', id: myId, name: myName, x: playerPos.x, y: playerPos.y, z: playerPos.z
-                        }));
-                        msg.destinationName = "krkshs/backrooms/level0";
-                        mqttClient.send(msg);
-                    }, 50);
+                    mqttClient.subscribe(TOPIC_ROOM);
+                    // Оповещаем всех в комнате, что мы зашли
+                    sendSignal({ type: "join", senderName: myName });
                 },
-                useSSL: true,
-                onFailure: () => {
-                    document.getElementById('srv-status').innerText = "CONNECTION FAILED";
-                    document.getElementById('srv-status').style.color = "#ff4d4d";
-                }
+                useSSL: true
             });
         }
 
-        // Удаление игроков при выходе из игры
-        setInterval(() => {
-            let now = Date.now();
-            for (let [id, data] of remotePlayers.entries()) {
-                if (now - data.lastSeen > 3000) {
-                    scene.remove(data.mesh);
-                    remotePlayers.delete(id);
-                }
+        function sendSignal(payload) {
+            payload.senderId = myId;
+            payload.senderName = myName;
+            const message = new Paho.MQTT.Message(JSON.stringify(payload));
+            message.destinationName = TOPIC_ROOM;
+            if(mqttClient && mqttClient.isConnected()) mqttClient.send(message);
+        }
+
+        // --- 3. СОЗДАНИЕ НАСТОЯЩЕГО P2P КОННЕКТА (WebRTC) ---
+        async function createPeerConnection(peerId, peerName, isOffer) {
+            if (peers.has(peerId)) return;
+
+            const pc = new RTCPeerConnection(rtcConfig);
+            const peerInfo = { pc: pc, name: peerName, micEnabled: true, stream: null };
+            peers.set(peerId, peerInfo);
+
+            // Добавляем наш локальный звук в это P2P соединение
+            localAudioStream.getTracks().forEach(track => {
+                pc.addTrack(track, localAudioStream);
+            });
+
+            // Если у нас активна демка экрана — добавляем и её трек тоже
+            if (localScreenStream) {
+                localScreenStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localScreenStream);
+                });
             }
-            document.getElementById('online-count').innerText = "В игре: " + (remotePlayers.size + 1);
-        }, 2000);
 
-        function startAmbientSound() {
+            // Обмен сетевыми путями (ICE Candidates)
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    sendSignal({ type: "candidate", targetId: peerId, candidate: event.candidate });
+                }
+            };
+
+            // Пришел медиапоток от друга!
+            pc.ontrack = (event) => {
+                const remoteStream = event.streams[0];
+                
+                // Проверяем тип трека (аудио или видео демка)
+                if (event.track.kind === "audio") {
+                    if (!document.getElementById(`audio-${peerId}`)) {
+                        const audioEl = document.createElement("audio");
+                        audioEl.id = `audio-${peerId}`;
+                        audioEl.srcObject = remoteStream;
+                        audioEl.autoplay = true;
+                        if (!audioEnabled) audioEl.muted = true;
+                        document.body.appendChild(audioEl);
+                        
+                        peerInfo.stream = remoteStream;
+                        initVoiceIndicator(remoteStream, peerId); // Подсветка микрофона
+                    }
+                } else if (event.track.kind === "video") {
+                    // Это демка экрана от друга! Открываем плеер сверху
+                    const videoEl = document.getElementById("screen-video");
+                    videoEl.srcObject = remoteStream;
+                    document.getElementById("screen-share-area").style.display = "block";
+                    document.getElementById("screen-user-label").innerText = `Демонстрация экрана: ${peerName}`;
+                }
+            };
+
+            // Создаем карточки интерфейса для нового друга
+            addPeerUI(peerId, peerName);
+
+            if (isOffer) {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                sendSignal({ type: "offer", targetId: peerId, sdp: offer });
+            }
+        }
+
+        function removePeer(peerId) {
+            const peer = peers.get(peerId);
+            if (peer) {
+                peer.pc.close();
+                peers.delete(peerId);
+            }
+            const card = document.getElementById(`card-${peerId}`);
+            const item = document.getElementById(`uitem-${peerId}`);
+            const aud = document.getElementById(`audio-${peerId}`);
+            if (card) card.remove();
+            if (item) item.remove();
+            if (aud) aud.remove();
+
+            // Если этот юзер вел демку — закрываем окно стрима
+            if(document.getElementById("screen-user-label").innerText.includes(peer.name)) {
+                document.getElementById("screen-share-area").style.display = "none";
+            }
+            updateOnlineCounter();
+        }
+
+        // --- 4. ДИНАМИЧЕСКИЙ ДИЗАЙН И ИНТЕРФЕЙС УЧАСТНИКОВ ---
+        function addPeerUI(peerId, peerName) {
+            // 1. Добавление в сайдбар списка
+            const item = document.createElement("div");
+            item.className = "user-item";
+            item.id = `uitem-${peerId}`;
+            item.innerHTML = `
+                <div class="user-avatar">${peerName[0].toUpperCase()}</div>
+                <div class="user-info">${peerName}</div>
+                <div class="user-status-icons" id="mic-status-${peerId}">🎙 Вкл</div>
+            `;
+            usersContainer.appendChild(item);
+
+            // 2. Создание голосовой карточки в центре
+            const card = document.createElement("div");
+            card.className = "peer-card";
+            card.id = `card-${peerId}`;
+            card.innerHTML = `
+                <div class="avatar-big">${peerName[0].toUpperCase()}</div>
+                <div class="name">${peerName}</div>
+                <div class="mic-indicator" id="card-mic-status-${peerId}">Собеседник</div>
+            `;
+            cardsContainer.appendChild(card);
+            updateOnlineCounter();
+        }
+
+        function updateLocalUserCard() {
+            // Добавляем себя в список
+            const item = document.createElement("div");
+            item.className = "user-item";
+            item.innerHTML = `
+                <div class="user-avatar" style="background-color: var(--success);">${myName[0].toUpperCase()}</div>
+                <div class="user-info"><strong>${myName} (Вы)</strong></div>
+            `;
+            usersContainer.appendChild(item);
+
+            const card = document.createElement("div");
+            card.className = "peer-card";
+            card.id = `card-local`;
+            card.innerHTML = `
+                <div class="avatar-big" style="background-color: var(--success);">${myName[0].toUpperCase()}</div>
+                <div class="name">${myName} (Вы)</div>
+                <div class="mic-indicator">Ваш микрофон</div>
+            `;
+            cardsContainer.appendChild(card);
+        }
+
+        function updateOnlineCounter() {
+            // Считаем нас + пиров
+            const count = peers.size + 1;
+            document.querySelector(".sidebar-header h3").innerText = `В сети комнаты (${count}):`;
+        }
+
+        // --- 5. ФУНКЦИЯ ПОДСВЕТКИ ГОВОРЯЩЕГО (Анализ громкости звука) ---
+        function initVoiceIndicator(stream, peerId) {
             try {
-                let ctx = new (window.AudioContext || window.webkitAudioContext)();
-                let osc = ctx.createOscillator();
-                let gain = ctx.createGain();
-                let filter = ctx.createBiquadFilter();
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(55, ctx.currentTime);
-                filter.type = 'lowpass'; filter.frequency.setValueAtTime(120, ctx.currentTime);
-                gain.gain.setValueAtTime(0.03, ctx.currentTime);
-                osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
-                osc.start();
-            }catch(e){}
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
+                source.connect(analyser);
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                function checkVolume() {
+                    if (!peers.has(peerId)) return; // Стоп, если юзер вышел
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for (let i = 0; i < dataArray.length; i++) {
+                        sum += dataArray[i];
+                    }
+                    let average = sum / dataArray.length;
+                    
+                    const card = document.getElementById(`card-${peerId}`);
+                    if (card) {
+                        // Если средняя частота выше порога шума — подсвечиваем карточку зеленым (как в Discord)
+                        if (average > 12) {
+                            card.classList.add("speaking");
+                        } else {
+                            card.classList.remove("speaking");
+                        }
+                    }
+                    requestAnimationFrame(checkVolume);
+                }
+                checkVolume();
+            } catch(e){}
         }
 
-        function onKeyDown(e) {
-            if(!isPlaying) return;
-            if (e.code === 'KeyW') moveForward = true;
-            if (e.code === 'KeyS') moveBackward = true;
-            if (e.code === 'KeyA') moveLeft = true;
-            if (e.code === 'KeyD') moveRight = true;
-            if (e.code === 'ShiftLeft') isSprinting = true;
-            if (e.code === 'KeyF') flashlight.visible = !flashlight.visible;
-        }
-
-        function onKeyUp(e) {
-            if (e.code === 'KeyW') moveForward = false;
-            if (e.code === 'KeyS') moveBackward = false;
-            if (e.code === 'KeyA') moveLeft = false;
-            if (e.code === 'KeyD') moveRight = false;
-            if (e.code === 'ShiftLeft') isSprinting = false;
-        }
-
-        function onMouseMove(e) {
-            if (document.pointerLockElement !== document.body) return;
-            yaw -= e.movementX * 0.0022;
-            pitch -= e.movementY * 0.0022;
-            pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch));
-            camera.rotation.y = yaw;
-            camera.rotation.x = pitch;
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        document.getElementById('start-btn').addEventListener('click', () => {
-            let name = document.getElementById('nickname-input').value.trim();
-            if(name) myName = name;
-            document.getElementById('player-name').innerText = "Игрок: " + myName;
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            document.getElementById('server-info').style.display = 'block';
-            document.getElementById('crosshair').style.display = 'block';
-            document.getElementById('instructions').style.display = 'block';
+        // --- 6. КНОПКИ УПРАВЛЕНИЯ (МУТ, ДЕМКА, ЧАТ) ---
+        
+        // Мут микрофона
+        document.getElementById("toggle-mic-btn").addEventListener("click", (e) => {
+            micEnabled = !micEnabled;
+            localAudioStream.getAudioTracks().forEach(track => track.enabled = micEnabled);
             
-            isPlaying = true;
-            document.body.requestPointerLock();
-            
-            startAmbientSound();
-            initGlobalMultiplayer();
+            e.target.classList.toggle("active", micEnabled);
+            e.target.classList.toggle("danger", !micEnabled);
+            e.target.innerText = micEnabled ? "🎙 Микро" : "🎙 Мут";
+
+            // Отправляем статус мута всем остальным
+            sendSignal({ type: "status_update", micEnabled: micEnabled });
         });
 
-        function animate() {
-            requestAnimationFrame(animate);
-            let delta = clock.getDelta();
-            if (delta > 0.1) delta = 0.1;
+        // Отключение входящего звука (Deafen)
+        document.getElementById("toggle-audio-btn").addEventListener("click", (e) => {
+            audioEnabled = !audioEnabled;
+            peers.forEach((peer, id) => {
+                const aud = document.getElementById(`audio-${id}`);
+                if (aud) aud.muted = !audioEnabled;
+            });
+            e.target.classList.toggle("active", audioEnabled);
+            e.target.classList.toggle("danger", !audioEnabled);
+            e.target.innerText = audioEnabled ? "🔊 Звук" : "🔇 Выкл";
+        });
 
-            if (isPlaying) {
-                let speed = isSprinting ? SPEED_SPRINT : SPEED_WALK;
-                playerVelocity.set(0, 0, 0);
+        // ДЕМОНСТРАЦИЯ ЭКРАНА (ДЕМКА)
+        document.getElementById("share-screen-btn").addEventListener("click", async (e) => {
+            if (!isSharingScreen) {
+                try {
+                    // Запрашиваем захват экрана у системы
+                    localScreenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                    isSharingScreen = true;
+                    e.target.innerText = "🛑 Остановить демку";
+                    e.target.classList.add("danger");
 
-                let forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-                let right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+                    // Показываем демку у себя локально в верхнем окне
+                    const localVideo = document.getElementById("screen-video");
+                    localVideo.srcObject = localScreenStream;
+                    document.getElementById("screen-share-area").style.display = "block";
+                    document.getElementById("screen-user-label").innerText = `Демонстрация экрана: Вы`;
 
-                if (moveForward) playerVelocity.add(forward);
-                if (moveBackward) playerVelocity.add(forward.clone().negate());
-                if (moveRight) playerVelocity.add(right);
-                if (moveLeft) playerVelocity.add(right.clone().negate());
+                    // Добавляем видеотрек во все текущие P2P коннекты к друзьям
+                    const videoTrack = localScreenStream.getVideoTracks()[0];
+                    peers.forEach(peer => {
+                        peer.pc.addTrack(videoTrack, localScreenStream);
+                        // Пересоздаем соединение (Renegotiation)
+                        peer.pc.createOffer().then(offer => {
+                            peer.pc.setLocalDescription(offer);
+                            sendSignal({ type: "offer", targetId: peer.pc.remoteDescription ? null : id, sdp: offer });
+                        });
+                    });
 
-                if (playerVelocity.lengthSq() > 0) {
-                    playerVelocity.normalize().multiplyScalar(speed * delta);
-                    
-                    let nextX = playerPos.clone(); nextX.x += playerVelocity.x;
-                    if (!checkCollision(nextX)) playerPos.x = nextX.x;
+                    // Авто-отключение демки, если нажать системную кнопку внизу экрана
+                    videoTrack.onended = () => { stopScreenShare(e.target); };
 
-                    let nextZ = playerPos.clone(); nextZ.z += playerVelocity.z;
-                    if (!checkCollision(nextZ)) playerPos.z = nextZ.z;
+                } catch (err) {
+                    console.log("Демка отменена или произошла ошибка: ", err);
                 }
-
-                camera.position.copy(playerPos);
-                updateChunks();
-                updateMonsterLogic(delta);
+            } else {
+                stopScreenShare(e.target);
             }
+        });
 
-            renderer.render(scene, camera);
+        function stopScreenShare(btnElement) {
+            isSharingScreen = false;
+            btnElement.innerText = "🖥 Включить демку";
+            btnElement.classList.remove("danger");
+            document.getElementById("screen-share-area").style.display = "none";
+
+            if (localScreenStream) {
+                localScreenStream.getTracks().forEach(track => track.stop());
+                localScreenStream = null;
+            }
+            // Оповещаем друзей обновить стрим
+            sendSignal({ type: "join", senderName: myName });
         }
 
-        init3D();
-        animate();
+        // ТЕКСТОВЫЙ ЧАТ
+        function appendChatMessage(author, text) {
+            const msg = document.createElement("div");
+            msg.className = "msg";
+            msg.innerHTML = `<span class="msg-author">${author}:</span>${text}`;
+            chatMsgContainer.appendChild(msg);
+            chatMsgContainer.scrollTop = chatMsgContainer.scrollHeight;
+        }
+
+        function sendTextMessage() {
+            const text = chatInput.value.trim();
+            if (text === "") return;
+            sendSignal({ type: "chat", text: text });
+            appendChatMessage(myName + " (Вы)", text);
+            chatInput.value = "";
+        }
+
+        document.getElementById("chat-send-btn").addEventListener("click", sendTextMessage);
+        chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendTextMessage(); });
+
+        // Выход из игры
+        document.getElementById("leave-btn").addEventListener("click", () => {
+            sendSignal({ type: "leave" });
+            window.location.reload();
+        });
+
+        window.onbeforeunload = () => {
+            if(mqttClient) sendSignal({ type: "leave" });
+        };
     </script>
 </body>
 </html>
