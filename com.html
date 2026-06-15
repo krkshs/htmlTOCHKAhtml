@@ -25,7 +25,6 @@
             overflow: hidden;
         }
 
-        /* Окно авторизации */
         #login-screen {
             position: absolute; width: 100%; height: 100%;
             background-color: var(--bg-main); z-index: 100;
@@ -49,12 +48,10 @@
         }
         .login-box button:hover { background-color: var(--accent-hover); }
 
-        /* Главный интерфейс */
         #app-container {
             display: flex; width: 100%; height: 100%; display: none;
         }
 
-        /* Боковая панель (Пользователи и Кнопки управления) */
         .sidebar {
             width: 260px; background-color: var(--bg-sidebar);
             display: flex; flex-direction: column; justify-content: space-between;
@@ -74,9 +71,7 @@
         }
         .user-info { flex-grow: 1; font-size: 0.95rem; }
         .user-status-icons { display: flex; gap: 5px; }
-        .status-icon { width: 16px; height: 16px; opacity: 0.6; }
 
-        /* Кнопки управления (Микро, Звук, Демка) */
         .controls-panel {
             padding: 15px; background-color: rgba(0,0,0,0.15);
             display: flex; flex-direction: column; gap: 8px;
@@ -94,12 +89,10 @@
         .control-btn.danger { background-color: var(--danger); }
         .control-btn.danger:hover { background-color: #bc3135; }
 
-        /* Центральная рабочая зона */
         .main-content {
             flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-main);
         }
 
-        /* Сетка стримов и говорящих */
         .streams-grid {
             flex-grow: 1; padding: 20px; display: flex; flex-wrap: wrap;
             gap: 15px; overflow-y: auto; align-content: flex-start;
@@ -111,7 +104,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid transparent;
             transition: border-color 0.15s, box-shadow 0.15s;
         }
-        /* Подсветка говорящего */
         .peer-card.speaking {
             border-color: var(--success);
             box-shadow: 0 0 15px rgba(35, 165, 90, 0.4);
@@ -128,7 +120,6 @@
             font-size: 0.8rem; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px;
         }
 
-        /* Большое окно для Демонстрации Экрана (Демки) */
         #screen-share-area {
             height: 50%; background-color: #000; display: none;
             position: relative; border-bottom: 2px solid rgba(0,0,0,0.3);
@@ -139,7 +130,6 @@
             padding: 5px 12px; border-radius: 4px; font-size: 0.9rem; font-weight: bold;
         }
 
-        /* Текстовый чат снизу */
         .chat-area {
             height: 200px; background-color: var(--bg-sidebar);
             display: flex; flex-direction: column; border-top: 1px solid rgba(0,0,0,0.2);
@@ -158,12 +148,10 @@
         }
         .chat-input-wrapper button:hover { background-color: var(--accent-hover); }
     </style>
-    <!-- Подключаем MQTT клиент Paho для обмена WebRTC сигналом напрямую на GitHub Pages -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 </head>
 <body>
 
-    <!-- Окно логина -->
     <div id="login-screen">
         <div class="login-box">
             <h2>Войс Чат & Демка</h2>
@@ -172,20 +160,15 @@
         </div>
     </div>
 
-    <!-- Основное окно -->
     <div id="app-container">
-        <!-- Левый сайдбар -->
         <div class="sidebar">
             <div>
                 <div class="sidebar-header">
-                    <h3>В сети комнаты:</h3>
+                    <h3>В сети комнаты (1):</h3>
                 </div>
-                <div class="user-list" id="users-container">
-                    <!-- Сюда добавляются юзеры динамически -->
-                </div>
+                <div class="user-list" id="users-container"></div>
             </div>
 
-            <!-- Нижняя панель с кнопками мута, демки и тд -->
             <div class="controls-panel">
                 <div class="btn-group">
                     <button class="control-btn active" id="toggle-mic-btn">🎙 Микро</button>
@@ -196,20 +179,14 @@
             </div>
         </div>
 
-        <!-- Центральный контент -->
         <div class="main-content">
-            <!-- Зона стрима/демки экрана -->
             <div id="screen-share-area">
                 <video id="screen-video" autoplay playsinline muted></video>
                 <div class="screen-label" id="screen-user-label">Демонстрация экрана: Никто</div>
             </div>
 
-            <!-- Сетка голосовых карточек участников -->
-            <div class="streams-grid" id="cards-container">
-                <!-- Карточки участников -->
-            </div>
+            <div class="streams-grid" id="cards-container"></div>
 
-            <!-- Текстовый чат -->
             <div class="chat-area">
                 <div class="chat-messages" id="chat-msg-container">
                     <div class="msg"><span class="msg-author">Система:</span>Добро пожаловать в голосовой чат!</div>
@@ -223,12 +200,10 @@
     </div>
 
     <script>
-        // Конфигурация WebRTC и брокера сигналов
         const MQTT_BROKER = "broker.hivemq.com";
         const MQTT_PORT = 8884;
-        const TOPIC_ROOM = "krkshs/voicechat/global_room_v3"; // Уникальная комната для вас
+        const TOPIC_ROOM = "krkshs/voicechat/global_room_v3";
         
-        // Бесплатные STUN-сервера от Google для пробития NAT и прямого коннекта (P2P)
         const rtcConfig = {
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
@@ -247,9 +222,8 @@
         let audioEnabled = true;
         let isSharingScreen = false;
 
-        const peers = new Map(); // Хранилище всех активных P2P соединений
+        const peers = new Map();
 
-        // Элементы интерфейса
         const loginScreen = document.getElementById("login-screen");
         const appContainer = document.getElementById("app-container");
         const nicknameInput = document.getElementById("nickname-input");
@@ -264,7 +238,6 @@
                 myName = nicknameInput.value.trim();
             }
 
-            // Запрашиваем доступ к микрофону
             try {
                 localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             } catch (err) {
@@ -275,48 +248,40 @@
             loginScreen.style.display = "none";
             appContainer.style.display = "flex";
 
-            // Отрисовываем себя в списке
             updateLocalUserCard();
-
-            // Подключаем обмен WebRTC пирами через MQTT
             initSignaling();
-        </script>
-        <!-- Разделяем скрипт, чтобы не перегружать парсер -->
-        <script>
-        // --- 2. СИГНАЛИНГ СЕРВЕР (ОБМЕН РУКОПОЖАТИЯМИ ЧЕРЕЗ MQTT) ---
+        }); // <-- ТУТ БЫЛ ФАТАЛЬНЫЙ КОСЯК, ТЕПЕРЬ ВСЁ ЗАКРЫТО ПРАВИЛЬНО!
+
+        // --- 2. СИГНАЛИНГ СЕРВЕР ЧЕРЕЗ ВЕБСОКЕТЫ ---
         function initSignaling() {
             mqttClient = new Paho.MQTT.Client(`wss://${MQTT_BROKER}:${MQTT_PORT}/mqtt`, "client_" + myId);
 
             mqttClient.onMessageArrived = async (message) => {
                 try {
                     const data = JSON.parse(message.payloadString);
-                    if (data.senderId === myId) return; // Игнорируем свои же пакеты
+                    if (data.senderId === myId) return;
 
-                    // Логика текстового чата
                     if (data.type === "chat") {
                         appendChatMessage(data.senderName, data.text);
                         return;
                     }
 
-                    // Логика отключения кого-то
                     if (data.type === "leave") {
                         removePeer(data.senderId);
                         return;
                     }
 
-                    // Обработка статусов микрофона друзей
                     if (data.type === "status_update") {
                         const peer = peers.get(data.senderId);
                         if (peer) {
                             peer.micEnabled = data.micEnabled;
-                            document.getElementById(`mic-status-${data.senderId}`).innerText = data.micEnabled ? "🎙 Вкл" : "🚫 Мут";
+                            const statusEl = document.getElementById(`mic-status-${data.senderId}`);
+                            if(statusEl) statusEl.innerText = data.micEnabled ? "🎙 Вкл" : "🚫 Мут";
                         }
                         return;
                     }
 
-                    // Логика WebRTC хэндшейка
                     if (data.type === "join") {
-                        // Новый юзер зашел! Создаем для него соединение и отправляем Offer
                         await createPeerConnection(data.senderId, data.senderName, true);
                     } else if (data.targetId === myId) {
                         if (data.type === "offer") {
@@ -325,7 +290,6 @@
                             await peer.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                             const answer = await peer.pc.createAnswer();
                             await peer.pc.setLocalDescription(answer);
-                            
                             sendSignal({ type: "answer", targetId: data.senderId, sdp: answer });
                         } else if (data.type === "answer") {
                             const peer = peers.get(data.senderId);
@@ -347,7 +311,6 @@
             mqttClient.connect({
                 onSuccess: () => {
                     mqttClient.subscribe(TOPIC_ROOM);
-                    // Оповещаем всех в комнате, что мы зашли
                     sendSignal({ type: "join", senderName: myName });
                 },
                 useSSL: true
@@ -362,7 +325,7 @@
             if(mqttClient && mqttClient.isConnected()) mqttClient.send(message);
         }
 
-        // --- 3. СОЗДАНИЕ НАСТОЯЩЕГО P2P КОННЕКТА (WebRTC) ---
+        // --- 3. СОЗДАНИЕ ПРЯМОГО P2P СТРИМА ЧЕРЕЗ ИНТЕРНЕТ (WebRTC) ---
         async function createPeerConnection(peerId, peerName, isOffer) {
             if (peers.has(peerId)) return;
 
@@ -370,30 +333,24 @@
             const peerInfo = { pc: pc, name: peerName, micEnabled: true, stream: null };
             peers.set(peerId, peerInfo);
 
-            // Добавляем наш локальный звук в это P2P соединение
             localAudioStream.getTracks().forEach(track => {
                 pc.addTrack(track, localAudioStream);
             });
 
-            // Если у нас активна демка экрана — добавляем и её трек тоже
             if (localScreenStream) {
                 localScreenStream.getTracks().forEach(track => {
                     pc.addTrack(track, localScreenStream);
                 });
             }
 
-            // Обмен сетевыми путями (ICE Candidates)
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
                     sendSignal({ type: "candidate", targetId: peerId, candidate: event.candidate });
                 }
             };
 
-            // Пришел медиапоток от друга!
             pc.ontrack = (event) => {
                 const remoteStream = event.streams[0];
-                
-                // Проверяем тип трека (аудио или видео демка)
                 if (event.track.kind === "audio") {
                     if (!document.getElementById(`audio-${peerId}`)) {
                         const audioEl = document.createElement("audio");
@@ -404,10 +361,9 @@
                         document.body.appendChild(audioEl);
                         
                         peerInfo.stream = remoteStream;
-                        initVoiceIndicator(remoteStream, peerId); // Подсветка микрофона
+                        initVoiceIndicator(remoteStream, peerId);
                     }
                 } else if (event.track.kind === "video") {
-                    // Это демка экрана от друга! Открываем плеер сверху
                     const videoEl = document.getElementById("screen-video");
                     videoEl.srcObject = remoteStream;
                     document.getElementById("screen-share-area").style.display = "block";
@@ -415,7 +371,6 @@
                 }
             };
 
-            // Создаем карточки интерфейса для нового друга
             addPeerUI(peerId, peerName);
 
             if (isOffer) {
@@ -438,16 +393,14 @@
             if (item) item.remove();
             if (aud) aud.remove();
 
-            // Если этот юзер вел демку — закрываем окно стрима
-            if(document.getElementById("screen-user-label").innerText.includes(peer.name)) {
+            if (peer && document.getElementById("screen-user-label").innerText.includes(peer.name)) {
                 document.getElementById("screen-share-area").style.display = "none";
             }
             updateOnlineCounter();
         }
 
-        // --- 4. ДИНАМИЧЕСКИЙ ДИЗАЙН И ИНТЕРФЕЙС УЧАСТНИКОВ ---
+        // --- 4. ИНТЕРФЕЙС СПИСКОВ И КАРТОЧЕК ---
         function addPeerUI(peerId, peerName) {
-            // 1. Добавление в сайдбар списка
             const item = document.createElement("div");
             item.className = "user-item";
             item.id = `uitem-${peerId}`;
@@ -458,7 +411,6 @@
             `;
             usersContainer.appendChild(item);
 
-            // 2. Создание голосовой карточки в центре
             const card = document.createElement("div");
             card.className = "peer-card";
             card.id = `card-${peerId}`;
@@ -466,13 +418,13 @@
                 <div class="avatar-big">${peerName[0].toUpperCase()}</div>
                 <div class="name">${peerName}</div>
                 <div class="mic-indicator" id="card-mic-status-${peerId}">Собеседник</div>
+                <div style="display:none;" id="volume-bar-${peerId}"></div>
             `;
             cardsContainer.appendChild(card);
             updateOnlineCounter();
         }
 
         function updateLocalUserCard() {
-            // Добавляем себя в список
             const item = document.createElement("div");
             item.className = "user-item";
             item.innerHTML = `
@@ -493,12 +445,11 @@
         }
 
         function updateOnlineCounter() {
-            // Считаем нас + пиров
             const count = peers.size + 1;
             document.querySelector(".sidebar-header h3").innerText = `В сети комнаты (${count}):`;
         }
 
-        // --- 5. ФУНКЦИЯ ПОДСВЕТКИ ГОВОРЯЩЕГО (Анализ громкости звука) ---
+        // --- 5. ФУНКЦИЯ ДИСКОРД-ПОДСВЕТКИ ГОВОРЯЩЕГО ЮЗЕРА ---
         function initVoiceIndicator(stream, peerId) {
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -510,7 +461,7 @@
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 
                 function checkVolume() {
-                    if (!peers.has(peerId)) return; // Стоп, если юзер вышел
+                    if (!peers.has(peerId)) return;
                     analyser.getByteFrequencyData(dataArray);
                     let sum = 0;
                     for (let i = 0; i < dataArray.length; i++) {
@@ -520,7 +471,6 @@
                     
                     const card = document.getElementById(`card-${peerId}`);
                     if (card) {
-                        // Если средняя частота выше порога шума — подсвечиваем карточку зеленым (как в Discord)
                         if (average > 12) {
                             card.classList.add("speaking");
                         } else {
@@ -533,9 +483,7 @@
             } catch(e){}
         }
 
-        // --- 6. КНОПКИ УПРАВЛЕНИЯ (МУТ, ДЕМКА, ЧАТ) ---
-        
-        // Мут микрофона
+        // --- 6. КНОПКИ КЛИЕНТА (МУТ, ДЕМКА, ЧАТ) ---
         document.getElementById("toggle-mic-btn").addEventListener("click", (e) => {
             micEnabled = !micEnabled;
             localAudioStream.getAudioTracks().forEach(track => track.enabled = micEnabled);
@@ -544,11 +492,9 @@
             e.target.classList.toggle("danger", !micEnabled);
             e.target.innerText = micEnabled ? "🎙 Микро" : "🎙 Мут";
 
-            // Отправляем статус мута всем остальным
             sendSignal({ type: "status_update", micEnabled: micEnabled });
         });
 
-        // Отключение входящего звука (Deafen)
         document.getElementById("toggle-audio-btn").addEventListener("click", (e) => {
             audioEnabled = !audioEnabled;
             peers.forEach((peer, id) => {
@@ -560,39 +506,30 @@
             e.target.innerText = audioEnabled ? "🔊 Звук" : "🔇 Выкл";
         });
 
-        // ДЕМОНСТРАЦИЯ ЭКРАНА (ДЕМКА)
         document.getElementById("share-screen-btn").addEventListener("click", async (e) => {
             if (!isSharingScreen) {
                 try {
-                    // Запрашиваем захват экрана у системы
                     localScreenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
                     isSharingScreen = true;
                     e.target.innerText = "🛑 Остановить демку";
                     e.target.classList.add("danger");
 
-                    // Показываем демку у себя локально в верхнем окне
                     const localVideo = document.getElementById("screen-video");
                     localVideo.srcObject = localScreenStream;
                     document.getElementById("screen-share-area").style.display = "block";
                     document.getElementById("screen-user-label").innerText = `Демонстрация экрана: Вы`;
 
-                    // Добавляем видеотрек во все текущие P2P коннекты к друзьям
                     const videoTrack = localScreenStream.getVideoTracks()[0];
-                    peers.forEach(peer => {
+                    peers.forEach((peer, id) => {
                         peer.pc.addTrack(videoTrack, localScreenStream);
-                        // Пересоздаем соединение (Renegotiation)
                         peer.pc.createOffer().then(offer => {
                             peer.pc.setLocalDescription(offer);
-                            sendSignal({ type: "offer", targetId: peer.pc.remoteDescription ? null : id, sdp: offer });
+                            sendSignal({ type: "offer", targetId: id, sdp: offer });
                         });
                     });
 
-                    // Авто-отключение демки, если нажать системную кнопку внизу экрана
                     videoTrack.onended = () => { stopScreenShare(e.target); };
-
-                } catch (err) {
-                    console.log("Демка отменена или произошла ошибка: ", err);
-                }
+                } catch (err) { console.log(err); }
             } else {
                 stopScreenShare(e.target);
             }
@@ -608,11 +545,9 @@
                 localScreenStream.getTracks().forEach(track => track.stop());
                 localScreenStream = null;
             }
-            // Оповещаем друзей обновить стрим
             sendSignal({ type: "join", senderName: myName });
         }
 
-        // ТЕКСТОВЫЙ ЧАТ
         function appendChatMessage(author, text) {
             const msg = document.createElement("div");
             msg.className = "msg";
@@ -632,7 +567,6 @@
         document.getElementById("chat-send-btn").addEventListener("click", sendTextMessage);
         chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendTextMessage(); });
 
-        // Выход из игры
         document.getElementById("leave-btn").addEventListener("click", () => {
             sendSignal({ type: "leave" });
             window.location.reload();
